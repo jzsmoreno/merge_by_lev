@@ -3,18 +3,51 @@ import pandas as pd
 from functools import lru_cache
 from IPython.display import clear_output
 import re
-import os 
+import os
+import sys
+
+def progressbar(it, prefix="", size=40, out=sys.stdout):
+    '''
+    Auxiliary function displaying a progress bar
+    ''' 
+    count = len(it)
+    def show(j):
+        x = int(size*j/count)
+        print("{}[{}{}] {}/{}".format(prefix, "#"*x, "."*(size-x), j, count), 
+                end='\r', file=out, flush=True)
+    show(0)
+    for i, item in enumerate(it):
+        yield item
+        show(i+1)
+    print("\n", flush=True, file=out) 
 
 def clearConsole():
+    '''
+    Auxiliary function that cleans the console
+    '''
     command = 'clear'
     if os.name in ('nt', 'dos'):
         command = 'cls'
     os.system(command)
 
-def check_cols_to_match(dict_dfs,df_names):
+def check_cols_to_match(dict_dfs, df_names):
     '''
-    Receives a dictionary of dataframes (dict_dfs) and a list of data frame names (dfs_names). 
+    Receives a dictionary of dataframes (dict_dfs) and a list of dataframe names (dfs_names). 
     Then check if the dataframes have the same columns. Print the data frames that do not match
+
+    params:
+        dict_dfs (Dictionary) : Contains the dataframes to be analyzed
+        df_names (List) : Contains the keys (names of each dataframe) of the dictionary
+
+    returns:
+        This function returns a summary of the condition of the columns 
+
+    example:
+        # dfs -> (List of dataframes)
+        # names -> (List of names)
+        dict_dfs = {name:df for df, name in zip(dfs, names)}
+        check_cols_to_match(dict_dfs, df_names)
+        >> 
     '''
     cols_set = set([col for name in df_names for col in dict_dfs[name].columns])
     for name in df_names:
@@ -30,6 +63,22 @@ def check_cols_to_match(dict_dfs,df_names):
 # https://github.com/jzsmoreno/Workflow.git
 # auxiliary function to rename columns after each match 
 def rename_cols(df):
+    '''
+    Operates on a dataframe resulting from a join.
+    Identifying the cases in which there was a renaming of similar columns
+    with different information, consolidating them.
+
+    params:
+        df (Dataframe) : The dataframe on which you want to operate
+
+    returns:
+        df (Dataframe) : The same df dataframe with the consolidated columns
+
+    example:
+        df_1 = df_1.merge(df_2, how = 'left')
+        df_1 = rename_cols(df_1)
+        >>
+    '''
     cols = []
     for i in df.columns:
         cols.append(i.replace('_x', ''))
@@ -50,6 +99,18 @@ def rename_cols(df):
 def clean_names(x, pattern = r"[a-zA-Zñáéíóú_]+\b"):
     '''
     Receives a string for cleaning to be used in merge_by_similarity function.
+
+    params:
+        x (String) : Character string to which a regular expression is to be applied
+        pattern (regex) : By default extracts names without numerical characters
+
+    returns:
+        result (String) : The clean text string
+
+    example:
+        x = 'stamp_1'
+        clean_names(x)
+        >> 'stamp'
     '''
     result = re.findall(pattern, str(x).replace('_', ''))
     if len(result) > 0:
@@ -98,6 +159,19 @@ def lev_dist(a, b):
     return min_dist(0, 0)
 
 def cal_cols_similarity(col_list):
+    '''
+    Calculate in pairs the levenshtein distance of the chars according to their name 
+
+    params:
+        col_list (List) : List with the chars names
+
+    returns:
+        mtx (np.array) : Matrix of $n$ x $n$ containing the results for $n$ chars.
+
+    example:
+        cal_cols_similarity(col_list)
+        >> 
+    '''
     n = len(col_list)
     mtx = np.zeros((n, n))
     for i in range(n):
@@ -106,13 +180,25 @@ def cal_cols_similarity(col_list):
     return mtx
 
 def merge_by_similarity(df_list, col_list, dist_min = 2, match_cols = 2, merge_mode = False):
+    '''
+    It makes use of the levenshtein distance to calculate 
+    a similarity between dataframes according to a list of names
+    to concatenate them or make a left join (if merge_mode = True).
+
+    params:
+        df_list (List of Dataframes) : The list of dataframes to be used in the process
+        col_list (List of chars) : The list of dataframe names
+        dist_min (int) : Minimum distance to determine that they are equal. By default is set to 2.
+        match_cols (int) : Minimum number of columns to concatenate. By default is set to 2.
+        merge_mode (Boolean) : If True, it seeks to take the largest dataframe and make a left join with those that share columns with each other.  
+    '''
     mtx = cal_cols_similarity(col_list)
     new_df_list = []
     new_col_list = []
     idx_to_exclude = []
     full_col_list_idx = list(range(len(col_list)))
     count = 0
-    for idx in range(len(col_list)):
+    for idx in progressbar(range(len(col_list)), "Computing: "):
         for i in full_col_list_idx:
             if idx != i:
                 if i not in idx_to_exclude:
@@ -120,11 +206,14 @@ def merge_by_similarity(df_list, col_list, dist_min = 2, match_cols = 2, merge_m
                         cols_x = set(df_list[idx].columns)
                         cols_y = set(df_list[i].columns)
                         cols = list(cols_x.intersection(cols_y))
+                        if(len(cols_x) != len(cols_y)):
+                            warning_type = 'UserWarning'
+                            msg = "You may have missed some of the columns in %s" % col_list[idx]
+                            print(f'{warning_type}: {msg}')
                         if len(cols) > match_cols:
                             try:
                                 df_list[idx] = pd.concat([df_list[idx][cols], df_list[i][cols]])
                                 idx_to_exclude.append(i)
-                                #del full_col_list_idx[full_col_list_idx.index(i)]
                             except:
                                 None
                         else:
