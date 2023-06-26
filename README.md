@@ -7,5 +7,3 @@ This package can be easily installed with pip:
 ```bash
 pip install git+https://github.com/jzsmoreno/merge_by_lev
 ```
-
-This is only a test
