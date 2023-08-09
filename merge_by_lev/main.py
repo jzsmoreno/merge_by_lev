@@ -2,13 +2,19 @@ import os
 import re
 import sys
 from functools import lru_cache
+from io import TextIOWrapper
+from typing import List, Tuple
 
 import numpy as np
 import pandas as pd
 from IPython.display import clear_output
+from numpy import ndarray
+from pandas.core.frame import DataFrame
 
 
-def progressbar(it, prefix="", size=40, out=sys.stdout):
+def progressbar(
+    it: range, prefix: str = "", size: int = 40, out: TextIOWrapper = sys.stdout
+) -> None:
     """
     Auxiliary function displaying a progress bar
     """
@@ -30,7 +36,7 @@ def progressbar(it, prefix="", size=40, out=sys.stdout):
     print("\n", flush=True, file=out)
 
 
-def clearConsole():
+def clearConsole() -> None:
     """
     Auxiliary function that cleans the console
     """
@@ -40,21 +46,21 @@ def clearConsole():
     os.system(command)
 
 
-def check_cols_to_match(dict_dfs, df_names):
+def check_cols_to_match(dict_dfs: dict[DataFrame], df_names: List[DataFrame]) -> None:
     """
     Receives a dictionary of dataframes (dict_dfs) and a list of dataframe names (dfs_names).
     Then check if the dataframes have the same columns. Print the data frames that do not match
 
     params:
         dict_dfs (Dictionary) : Contains the dataframes to be analyzed
-        df_names (List) : Contains the keys (names of each dataframe) of the dictionary
+        df_names (`List`) : Contains the keys (names of each dataframe) of the dictionary
 
     returns:
         This function returns a summary of the condition of the columns
 
     example:
-        # dfs -> (List of dataframes)
-        # names -> (List of names)
+        # dfs -> (`List` of dataframes)
+        # names -> (`List` of names)
         dict_dfs = {name:df for df, name in zip(dfs, names)}
         check_cols_to_match(dict_dfs, df_names)
         >>
@@ -73,17 +79,17 @@ def check_cols_to_match(dict_dfs, df_names):
 
 # https://github.com/jzsmoreno/Workflow.git
 # auxiliary function to rename columns after each match
-def rename_cols(df):
+def rename_cols(df: DataFrame) -> DataFrame:
     """
     Operates on a dataframe resulting from a join.
     Identifying the cases in which there was a renaming of similar columns
     with different information, consolidating them.
 
     params:
-        df (Dataframe) : The dataframe on which you want to operate
+        df (`Dataframe`) : The dataframe on which you want to operate
 
     returns:
-        df (Dataframe) : The same df dataframe with the consolidated columns
+        df (`Dataframe`) : The same df dataframe with the consolidated columns
 
     example:
         df_1 = df_1.merge(df_2, how = 'left')
@@ -108,7 +114,7 @@ def rename_cols(df):
     return df
 
 
-def clean_names(x, pattern=r"[a-zA-Zñáéíóú_]+\b"):
+def clean_names(x: str, pattern: str = r"[a-zA-Zñáéíóú_]+\b") -> str:
     """
     Receives a string for cleaning to be used in merge_by_similarity function.
 
@@ -134,7 +140,7 @@ def clean_names(x, pattern=r"[a-zA-Zñáéíóú_]+\b"):
     return result
 
 
-def lev_dist(a, b):
+def lev_dist(a: str, b: str) -> int:
     """
     This function will calculate the levenshtein distance between two input
     strings a and b
@@ -171,15 +177,15 @@ def lev_dist(a, b):
     return min_dist(0, 0)
 
 
-def cal_cols_similarity(col_list):
+def cal_cols_similarity(col_list: List[str]) -> ndarray:
     """
     Calculate in pairs the levenshtein distance of the chars according to their name
 
     params:
-        col_list (List) : List with the chars names
+        col_list (`List`) : List with the chars names
 
     returns:
-        mtx (np.array) : Matrix of $n$ x $n$ containing the results for $n$ chars.
+        mtx (`np.array`) : Matrix of $n$ x $n$ containing the results for $n$ chars.
 
     example:
         cal_cols_similarity(col_list)
@@ -193,18 +199,24 @@ def cal_cols_similarity(col_list):
     return mtx
 
 
-def merge_by_similarity(df_list, col_list, dist_min=2, match_cols=2, merge_mode=False):
+def merge_by_similarity(
+    df_list: List[DataFrame],
+    col_list: List[str],
+    dist_min: int = 2,
+    match_cols: int = 2,
+    merge_mode: bool = False,
+) -> Tuple[List[DataFrame], List[str], ndarray]:
     """
     It makes use of the levenshtein distance to calculate
     a similarity between dataframes according to a list of names
-    to concatenate them or make a left join (if merge_mode = True).
+    to concatenate them or make a left join (if merge_mode = `True`).
 
     params:
         df_list (List of Dataframes) : The list of dataframes to be used in the process
         col_list (List of chars) : The list of dataframe names
-        dist_min (int) : Minimum distance to determine that they are equal. By default is set to 2.
-        match_cols (int) : Minimum number of columns to concatenate. By default is set to 2.
-        merge_mode (Boolean) : If True, it seeks to take the largest dataframe and make a left join with those that share columns with each other.
+        dist_min (`int`) : Minimum distance to determine that they are equal. By default is set to `2`.
+        match_cols (`int`) : Minimum number of columns to concatenate. By default is set to `2`.
+        merge_mode (Boolean) : If `True`, it seeks to take the largest dataframe and make a left join with those that share columns with each other.
     """
     mtx = cal_cols_similarity(col_list)
     new_df_list = []
@@ -224,7 +236,7 @@ def merge_by_similarity(df_list, col_list, dist_min=2, match_cols=2, merge_mode=
                             warning_type = "UserWarning"
                             msg = "You may have missed some of the columns in %s" % col_list[idx]
                             print(f"{warning_type}: {msg}")
-                        if len(cols) > match_cols:
+                        if len(cols) >= match_cols:
                             try:
                                 df_list[idx] = pd.concat([df_list[idx][cols], df_list[i][cols]])
                                 idx_to_exclude.append(i)
@@ -261,7 +273,7 @@ def merge_by_similarity(df_list, col_list, dist_min=2, match_cols=2, merge_mode=
                                     except:
                                         None
         if idx not in idx_to_exclude:
-            new_df_list.append(df_list[idx])
+            new_df_list.append(df_list[idx].reset_index(drop=True))
             new_col_list.append(col_list[idx])
         count += 1
     return new_df_list, new_col_list, mtx
