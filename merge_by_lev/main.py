@@ -10,6 +10,7 @@ import pandas as pd
 from IPython.display import clear_output
 from numpy import ndarray
 from pandas.core.frame import DataFrame
+from tabulate import tabulate
 
 
 def progressbar(
@@ -199,6 +200,51 @@ def cal_cols_similarity(col_list: List[str]) -> ndarray:
     return mtx
 
 
+def create_table_tabular(df1: DataFrame, df2: DataFrame) -> List[List[str]]:
+    """Create a table for column names from two dataframes
+
+    Args:
+        df1 (`DataFrame`): First dataframe
+        df2 (`DataFrame`): Second dataframe
+
+    Returns:
+        List[List[`str`]]: List of rows for each of the columns of both dataframes
+    """
+    table = []
+    col_names_df1 = df1.columns
+    col_names_df2 = df2.columns
+    max_length = max(len(col_names_df1), len(col_names_df2))
+    for i in range(max_length):
+        col1 = col_names_df1[i] if i < len(col_names_df1) else ""
+        col2 = col_names_df2[i] if i < len(col_names_df2) else ""
+        table.append([col1, col2])
+    return table
+
+
+def rename_cols_dict(df_name: str, df: DataFrame, cols: list) -> DataFrame:
+    """Function that allows to rename a segment of columns of a dataframe from a list as input.
+
+    Args:
+        df_name (str): Name of dataframe
+        df (DataFrame): Dataframe whose columns names will be changed
+        cols (list): List indicating the names of the columns to be changed
+
+    Returns:
+        DataFrame: Processed dataframe with changed names
+    """
+    print(f"Rename the columns of {df_name}")
+    string_list = []
+    for name in cols:
+        string = input(f"Enter name for {name}: ")
+        string_list.append(string)
+    # Create a dictionary with keys in cols and values in string_list
+    dict_rename = dict(zip(cols, string_list))
+    # Rename all the columns using the new dictionary created above
+    df = df.rename(columns=dict_rename)
+    print("Columns renamed!")
+    return df
+
+
 def merge_by_similarity(
     df_list: List[DataFrame],
     col_list: List[str],
@@ -234,8 +280,32 @@ def merge_by_similarity(
                         cols = list(cols_x.intersection(cols_y))
                         if len(cols_x) != len(cols_y):
                             warning_type = "UserWarning"
-                            msg = "You may have missed some of the columns in %s" % col_list[idx]
+                            msg = "You may have missed some of the columns.\n"
                             print(f"{warning_type}: {msg}")
+                            print("The columns that will be lost in each DataFrame are : \n")
+                            diff_x = [c for c in cols_x - cols_y]
+                            diff_y = [c for c in cols_y - cols_x]
+                            print("Columns in", col_list[idx], ":", diff_x)
+                            print("\n")
+                            print("Columns in", col_list[i], ":", diff_y)
+                            rename_manually = input("You want to rename the columns [y/n] : ")
+                            table_data = create_table_tabular(df_list[idx], df_list[i])
+                            headers = [col_list[idx], col_list[i]]
+                            print(
+                                "########################################################################################"
+                            )
+                            print("The total number of columns in each DataFrame is : ")
+                            print(tabulate(table_data, headers=headers, tablefmt="grid"))
+                            if rename_manually == "y":
+                                df_list[idx] = rename_cols_dict(col_list[idx], df_list[idx], diff_x)
+                                print(
+                                    "########################################################################################"
+                                )
+                                df_list[i] = rename_cols_dict(col_list[i], df_list[i], diff_y)
+                                cols_x = set(df_list[idx].columns)
+                                cols_y = set(df_list[i].columns)
+                                cols = list(cols_x.intersection(cols_y))
+
                         if len(cols) >= match_cols:
                             try:
                                 df_list[idx] = pd.concat([df_list[idx][cols], df_list[i][cols]])
