@@ -232,17 +232,20 @@ def rename_cols_dict(df_name: str, df: DataFrame, cols: list) -> DataFrame:
     Returns:
         DataFrame: Processed dataframe with changed names
     """
-    print(f"Rename the columns of {df_name}")
-    string_list = []
-    for name in cols:
-        string = input(f"Enter name for {name}: ")
-        string_list.append(string)
-    # Create a dictionary with keys in cols and values in string_list
-    dict_rename = dict(zip(cols, string_list))
-    # Rename all the columns using the new dictionary created above
-    df = df.rename(columns=dict_rename)
-    print("Columns renamed!")
-    return df
+    if not cols:
+        return df
+    else:
+        print(f"Rename the columns of {df_name}")
+        string_list = []
+        for name in cols:
+            string = input(f"Enter name for {name}: ")
+            string_list.append(string)
+        # Create a dictionary with keys in cols and values in string_list
+        dict_rename = dict(zip(cols, string_list))
+        # Rename all the columns using the new dictionary created above
+        df = df.rename(columns=dict_rename)
+        print("Columns renamed!")
+        return df
 
 
 def merge_by_similarity(
