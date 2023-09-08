@@ -254,6 +254,7 @@ def merge_by_similarity(
     dist_min: int = 2,
     match_cols: int = 2,
     merge_mode: bool = False,
+    manually: bool = False,
 ) -> Tuple[List[DataFrame], List[str], ndarray]:
     """
     It makes use of the levenshtein distance to calculate
@@ -266,6 +267,7 @@ def merge_by_similarity(
         dist_min (`int`) : Minimum distance to determine that they are equal. By default is set to `2`.
         match_cols (`int`) : Minimum number of columns to concatenate. By default is set to `2`.
         merge_mode (Boolean) : If `True`, it seeks to take the largest dataframe and make a left join with those that share columns with each other.
+        manually (Boolean) : If `False` avoids inputs when there are differences in columns. By default is set to `False`.
     """
     mtx = cal_cols_similarity(col_list)
     new_df_list = []
@@ -285,29 +287,30 @@ def merge_by_similarity(
                             warning_type = "UserWarning"
                             msg = "You may have missed some of the columns.\n"
                             print(f"{warning_type}: {msg}")
-                            print("The columns that will be lost in each DataFrame are : \n")
-                            diff_x = [c for c in cols_x - cols_y]
-                            diff_y = [c for c in cols_y - cols_x]
-                            print("Columns in", col_list[idx], ":", diff_x)
-                            print("\n")
-                            print("Columns in", col_list[i], ":", diff_y)
-                            rename_manually = input("You want to rename the columns [y/n] : ")
-                            table_data = create_table_tabular(df_list[idx], df_list[i])
-                            headers = [col_list[idx], col_list[i]]
-                            print(
-                                "########################################################################################"
-                            )
-                            print("The total number of columns in each DataFrame is : ")
-                            print(tabulate(table_data, headers=headers, tablefmt="grid"))
-                            if rename_manually == "y":
-                                df_list[idx] = rename_cols_dict(col_list[idx], df_list[idx], diff_x)
+                            if manually:
+                                print("The columns that will be lost in each DataFrame are : \n")
+                                diff_x = [c for c in cols_x - cols_y]
+                                diff_y = [c for c in cols_y - cols_x]
+                                print("Columns in", col_list[idx], ":", diff_x)
+                                print("\n")
+                                print("Columns in", col_list[i], ":", diff_y)
+                                rename_manually = input("You want to rename the columns [y/n] : ")
+                                table_data = create_table_tabular(df_list[idx], df_list[i])
+                                headers = [col_list[idx], col_list[i]]
                                 print(
                                     "########################################################################################"
                                 )
-                                df_list[i] = rename_cols_dict(col_list[i], df_list[i], diff_y)
-                                cols_x = set(df_list[idx].columns)
-                                cols_y = set(df_list[i].columns)
-                                cols = list(cols_x.intersection(cols_y))
+                                print("The total number of columns in each DataFrame is : ")
+                                print(tabulate(table_data, headers=headers, tablefmt="grid"))
+                                if rename_manually == "y":
+                                    df_list[idx] = rename_cols_dict(col_list[idx], df_list[idx], diff_x)
+                                    print(
+                                        "########################################################################################"
+                                    )
+                                    df_list[i] = rename_cols_dict(col_list[i], df_list[i], diff_y)
+                                    cols_x = set(df_list[idx].columns)
+                                    cols_y = set(df_list[i].columns)
+                                    cols = list(cols_x.intersection(cols_y))
 
                         if len(cols) >= match_cols:
                             try:
