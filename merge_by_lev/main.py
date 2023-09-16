@@ -303,7 +303,9 @@ def merge_by_similarity(
                                 print("The total number of columns in each DataFrame is : ")
                                 print(tabulate(table_data, headers=headers, tablefmt="grid"))
                                 if rename_manually == "y":
-                                    df_list[idx] = rename_cols_dict(col_list[idx], df_list[idx], diff_x)
+                                    df_list[idx] = rename_cols_dict(
+                                        col_list[idx], df_list[idx], diff_x
+                                    )
                                     print(
                                         "########################################################################################"
                                     )
