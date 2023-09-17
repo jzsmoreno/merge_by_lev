@@ -19,7 +19,6 @@ setuptools.setup(
         "numpy",
         "pandas",
         "tabulate",
-        "git+https://github.com/jzsmoreno/pydbsmgr",
         "pyarrow",
     ],
     classifiers=[
