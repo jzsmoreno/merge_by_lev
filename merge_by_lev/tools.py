@@ -4,7 +4,9 @@ import pandas as pd
 from pandas.core.frame import DataFrame
 
 
-def check_empty_df(dfs: List[DataFrame], names: List[str]) -> Tuple[List[DataFrame], List[str]]:
+def check_empty_df(
+    dfs: List[DataFrame], names: List[str], num_cols: str = 2
+) -> Tuple[List[DataFrame], List[str]]:
     """Check if the `DataFrame` is empty or not
 
     Args:
@@ -17,8 +19,8 @@ def check_empty_df(dfs: List[DataFrame], names: List[str]) -> Tuple[List[DataFra
     new_dfs = []
     new_names = []
     for i, df in enumerate(dfs):
-        if len(df.columns) > 1:
-            if len(df) > 1:
+        if len(df.columns) > num_cols:
+            if len(df) > num_cols:
                 new_dfs.append(df)
                 new_names.append(names[i])
 
