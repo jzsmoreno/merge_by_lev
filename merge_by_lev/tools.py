@@ -17,8 +17,8 @@ def check_empty_df(dfs: List[DataFrame], names: List[str]) -> Tuple[List[DataFra
     new_dfs = []
     new_names = []
     for i, df in enumerate(dfs):
-        if len(df.columns) > 0:
-            if len(df) > 0:
+        if len(df.columns) > 1:
+            if len(df) > 1:
                 new_dfs.append(df)
                 new_names.append(names[i])
 
