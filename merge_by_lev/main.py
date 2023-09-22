@@ -12,6 +12,8 @@ from numpy import ndarray
 from pandas.core.frame import DataFrame
 from tabulate import tabulate
 
+from merge_by_lev.tools import check_empty_df
+
 
 def progressbar(
     it: range, prefix: str = "", size: int = 40, out: TextIOWrapper = sys.stdout
@@ -269,6 +271,7 @@ def merge_by_similarity(
         merge_mode (Boolean) : If `True`, it seeks to take the largest dataframe and make a left join with those that share columns with each other.
         manually (Boolean) : If `False` avoids inputs when there are differences in columns. By default is set to `False`.
     """
+    df_list, col_list = check_empty_df(df_list, col_list)
     mtx = cal_cols_similarity(col_list)
     new_df_list = []
     new_col_list = []
