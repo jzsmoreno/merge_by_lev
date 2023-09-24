@@ -5,7 +5,7 @@ with open("README.md", "r", encoding="utf-8") as fh:
 
 setuptools.setup(
     name="merge_by_lev",
-    version="0.1.1",
+    version="0.1.2",
     author="J. A. Moreno-Guerra",
     author_email="jzs.gm27@gmail.com",
     description="Testing installation of Package",

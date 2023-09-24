@@ -148,7 +148,7 @@ class DataSchema(DataFrameToYaml):
         return schema
 
     def get_table(self):
-        table = pa.Table.from_pandas(self.df, schema=self.schema)
+        table = pa.Table.from_pandas(self.df, schema=self.get_schema())
         return table
 
 
@@ -158,5 +158,5 @@ if __name__ == "__main__":
     df = pd.DataFrame(data)
     table_name = "test_table"
     data_handler = DataSchema(df)
-    data_handler.get_schema()
+    # data_handler.get_schema()
     table = data_handler.get_table()
