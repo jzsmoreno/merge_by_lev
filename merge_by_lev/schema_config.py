@@ -1,9 +1,97 @@
+import json
+
 import pyarrow as pa
 import yaml
 from pydbsmgr.main import *
 from pydbsmgr.main import DataFrame
 from pydbsmgr.utils.azure_sdk import *
 from pydbsmgr.utils.azure_sdk import DataFrame
+
+
+class ColumnObfuscation:
+    """Allows generic column renaming and creates a `.json` file with the equivalent names."""
+
+    def __init__(self, df: DataFrame) -> None:
+        self.df = df.copy()
+
+    def get_frame(
+        self,
+        json_name: str = "output.json",
+        write_to_cloud: bool = True,
+        connection_string: str = "",
+        container_name: str = "",
+        overwrite: bool = True,
+        encoding: str = "utf-8",
+    ) -> DataFrame:
+        """Returns the `DataFrame` with the obfuscated columns.
+
+        Args:
+            json_name (`str`, optional): name of the dictionary `.json` file. By default it is set to `output.json`.
+            write_to_cloud (`bool`, optional): boolean variable to write to an Azure storage account. By default it is set to `True`.
+            connection_string (`str`, optional): the connection string to storage account. By default it is set to "".
+            container_name (`str`, optional): Azure container name. By default it is set to "".
+            overwrite (`bool`, optional): boolean variable that indicates whether to overwrite. By default it is set to `True`.
+            encoding (`str`, optional): file coding. By default it is set to `utf-8`.
+
+        Returns:
+            `DataFrame`: `DataFrame` with changed columns
+        """
+        self._generate_dict(encoding)
+        self._writer(json_name, write_to_cloud, connection_string, container_name, overwrite)
+        df_renamed = (self.df).rename(columns=self.obfuscator)
+        return df_renamed
+
+    def _writer(
+        self,
+        json_name: str,
+        write_to_cloud: bool,
+        connection_string: str,
+        container_name: str,
+        overwrite: bool,
+    ) -> None:
+        """writer of the json file.
+
+        Args:
+            json_name (`str`): name of the dictionary `.json` file.
+            write_to_cloud (`bool`): boolean variable to write to an Azure storage account.
+            connection_string (`str`): the connection string to storage account.
+            container_name (`str`): Azure container name.
+            overwrite (`bool`): boolean variable that indicates whether to overwrite.
+        """
+        if write_to_cloud:
+            blob_service_client = BlobServiceClient.from_connection_string(connection_string)
+            blob_client = blob_service_client.get_container_client(container_name)
+
+            blob_client.upload_blob(
+                name=json_name,
+                data=self.json_bytes,
+                overwrite=overwrite,
+            )
+        else:
+            with open(json_name, "w") as file:
+                file.write(self.json_string)
+
+    def _generate_dict(self, encoding: str) -> dict:
+        """generates the dictionary that renames the columns of the `DataFrame`.
+
+        Args:
+            encoding (`str`): file coding.
+
+        Returns:
+            `dict`: dictionary to rename columns.
+        """
+        values = []
+        keys = []
+        for i, key in enumerate((self.df).columns):
+            col_name = "[col_%s]" % i
+            values.append(col_name)
+            keys.append(key)
+        obfuscator = dict(zip(keys, values))
+        self.obfuscator = obfuscator
+        self.inverted_dict = {v: k for k, v in (self.obfuscator).items()}
+        self.json_string = json.dumps(self.inverted_dict)
+        self.json_bytes = (self.json_string).encode(encoding)
+        return obfuscator
 
 
 class DataFrameToYaml:
@@ -160,3 +248,6 @@ if __name__ == "__main__":
     data_handler = DataSchema(df)
     # data_handler.get_schema()
     table = data_handler.get_table()
+    column_handler = ColumnObfuscation(df)
+    df = column_handler.get_frame(write_to_cloud=False)
+    breakpoint()
