@@ -238,7 +238,21 @@ class DataSchema(DataFrameToYaml):
         return schema
 
     def get_table(self):
-        table = pa.Table.from_pandas(self.df, schema=self.get_schema())
+        try:
+            table = pa.Table.from_pandas(self.df, schema=self.get_schema())
+        except:
+            try:
+                record_batch = pa.RecordBatch.from_pandas(self.df)
+                table = pa.Table.from_pandas(self.df)
+            except:
+                try:
+                    self.df = (self.df).convert_dtypes()
+                    table = pa.Table.from_pandas(self.df)
+                except pa.lib.ArrowTypeError as e:
+                    warning_type = "UserWarning"
+                    msg = "It was not possible to create the table\n"
+                    msg += "Error: {%s}" % e
+                    return print(f"{warning_type}: {msg}")
         return table
 
 
