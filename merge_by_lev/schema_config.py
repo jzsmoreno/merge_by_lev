@@ -252,7 +252,8 @@ class DataSchema(DataFrameToYaml):
                     warning_type = "UserWarning"
                     msg = "It was not possible to create the table\n"
                     msg += "Error: {%s}" % e
-                    return print(f"{warning_type}: {msg}")
+                    print(f"{warning_type}: {msg}")
+                    return None
         return table
 
 
