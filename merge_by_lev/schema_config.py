@@ -205,6 +205,8 @@ class DataSchema(DataFrameToYaml):
                     dtype = pa.timestamp("ns")
                 elif col_type == "int32":
                     dtype = pa.int32()
+                elif col_type == "bool":
+                    dtype = pa.bool_()
                 else:
                     raise ValueError(f"Unsupported type: {col_type}")
 
