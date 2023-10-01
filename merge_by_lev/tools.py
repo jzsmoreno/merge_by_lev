@@ -87,13 +87,14 @@ class QualityAssesment:
 
 
 def check_empty_df(
-    dfs: List[DataFrame], names: List[str], num_cols: str = 2
+    dfs: List[DataFrame], names: List[str], num_cols: int = 2
 ) -> Tuple[List[DataFrame], List[str]]:
     """Check if the `DataFrame` is empty or not
 
     Args:
         dfs (List[`DataFrame`]): List of dataframes to iterate over
         names (List[`str`]): List of `DataFrame` names
+        num_cols (`int`): minimum number of columns of a `DataFrame`. By default is set to `2`
 
     Returns:
         Tuple[List[DataFrame], List[str]]: Verified dataframes and names

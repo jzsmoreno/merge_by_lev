@@ -257,6 +257,7 @@ def merge_by_similarity(
     match_cols: int = 2,
     merge_mode: bool = False,
     manually: bool = False,
+    drop_empty: bool = False,
 ) -> Tuple[List[DataFrame], List[str], ndarray]:
     """
     It makes use of the levenshtein distance to calculate
@@ -270,8 +271,10 @@ def merge_by_similarity(
         match_cols (`int`) : Minimum number of columns to concatenate. By default is set to `2`.
         merge_mode (Boolean) : If `True`, it seeks to take the largest dataframe and make a left join with those that share columns with each other.
         manually (Boolean) : If `False` avoids inputs when there are differences in columns. By default is set to `False`.
+        drop_empty (Boolean) : If `True`, identify frames with few columns and rows to be discarded. By default is set to `False`.
     """
-    df_list, col_list = check_empty_df(df_list, col_list)
+    if drop_empty:
+        df_list, col_list = check_empty_df(df_list, col_list)
     mtx = cal_cols_similarity(col_list)
     new_df_list = []
     new_col_list = []
