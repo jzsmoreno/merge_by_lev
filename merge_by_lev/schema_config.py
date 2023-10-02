@@ -58,7 +58,7 @@ class StandardColumns:
         df.columns = df.columns.str.replace("\n", "_")
         df.columns = [self._camel_to_snake(col) for col in df.columns]
         df.columns = [self._truncate(col) for col in df.columns]
-        df.columns = [self._sort_columns_by_length(col) for col in df.columns]
+        df = self._sort_columns_by_length(df)
         return df
 
     def _truncate(self, column_name: str) -> str:
