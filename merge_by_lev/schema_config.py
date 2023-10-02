@@ -55,8 +55,10 @@ class StandardColumns:
         df.columns = df.columns.str.title()
         df.columns = df.columns.str.strip()
         df.columns = df.columns.str.replace(" ", "")
+        df.columns = df.columns.str.replace("\n", "_")
         df.columns = [self._camel_to_snake(col) for col in df.columns]
         df.columns = [self._truncate(col) for col in df.columns]
+        df.columns = [self._sort_columns_by_length(col) for col in df.columns]
         return df
 
     def _truncate(self, column_name: str) -> str:
@@ -64,6 +66,13 @@ class StandardColumns:
             return column_name[:128]
         else:
             return column_name
+
+    def _sort_columns_by_length(self, dataframe: DataFrame) -> DataFrame:
+        # Get the column names and sort them by length
+        sorted_columns = sorted(dataframe.columns, key=len, reverse=True)
+        sorted_dataframe = dataframe[sorted_columns]
+
+        return sorted_dataframe
 
     def _camel_to_snake(self, column_name: str) -> str:
         # Use regular expression to convert camelCase/PascalCase to snake_case
