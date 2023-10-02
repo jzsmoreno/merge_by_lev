@@ -8,8 +8,9 @@ from pydbsmgr.utils.azure_sdk import *
 from pydbsmgr.utils.azure_sdk import DataFrame
 
 
-class ColumnObfuscation:
-    """Allows generic column renaming and creates a `.json` file with the equivalent names."""
+class StandardColumns:
+    """Allows generic column renaming and creates a `.json` file with the equivalent names.
+    Allows columns containing questions to be transformed according to `SQL` standards."""
 
     def __init__(self, df: DataFrame) -> None:
         self.df = df.copy()
@@ -22,6 +23,7 @@ class ColumnObfuscation:
         container_name: str = "",
         overwrite: bool = True,
         encoding: str = "utf-8",
+        get_standard: bool = True,
     ) -> DataFrame:
         """Returns the `DataFrame` with the obfuscated columns.
 
@@ -32,14 +34,41 @@ class ColumnObfuscation:
             container_name (`str`, optional): Azure container name. By default it is set to "".
             overwrite (`bool`, optional): boolean variable that indicates whether to overwrite. By default it is set to `True`.
             encoding (`str`, optional): file coding. By default it is set to `utf-8`.
+            get_standard (`bool`, optional): instead of obfuscation returns the columns with SQL standards. By default it is set to `True`.
 
         Returns:
             `DataFrame`: `DataFrame` with changed columns
         """
         self._generate_dict(encoding)
         self._writer(json_name, write_to_cloud, connection_string, container_name, overwrite)
-        df_renamed = (self.df).rename(columns=self.obfuscator)
+        if get_standard:
+            df_renamed = self._sql_standards()
+        else:
+            df_renamed = (self.df).rename(columns=self.obfuscator)
         return df_renamed
+
+    def _sql_standards(self) -> DataFrame:
+        df = (self.df).copy()
+        df.columns = df.columns.str.lower()
+        df.columns = df.columns.str.replace("_", " ")
+        df.columns = df.columns.str.replace("__", " ")
+        df.columns = df.columns.str.title()
+        df.columns = df.columns.str.strip()
+        df.columns = df.columns.str.replace(" ", "")
+        df.columns = [self._camel_to_snake(col) for col in df.columns]
+        df.columns = [self._truncate(col) for col in df.columns]
+        return df
+
+    def _truncate(self, column_name: str) -> str:
+        if len(column_name) >= 128:
+            return column_name[:128]
+        else:
+            return column_name
+
+    def _camel_to_snake(self, column_name: str) -> str:
+        # Use regular expression to convert camelCase/PascalCase to snake_case
+        s1 = re.sub("(.)([A-Z][a-z]+)", r"\1_\2", column_name)
+        return re.sub("([a-z0-9])([A-Z])", r"\1_\2", s1).lower()
 
     def _writer(
         self,
