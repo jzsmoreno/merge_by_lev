@@ -4,8 +4,9 @@ import pyarrow as pa
 import yaml
 from pydbsmgr.main import *
 from pydbsmgr.main import DataFrame
+from pydbsmgr.lightest import *
 from pydbsmgr.utils.azure_sdk import *
-from pydbsmgr.utils.azure_sdk import DataFrame
+from pyarrow import Table
 
 
 class StandardColumns:
@@ -58,7 +59,7 @@ class StandardColumns:
         df.columns = df.columns.str.replace("\n", "_")
         df.columns = [self._camel_to_snake(col) for col in df.columns]
         df.columns = [self._truncate(col) for col in df.columns]
-        df = self._sort_columns_by_length(df)
+        # df = self._sort_columns_by_length(df)
         return df
 
     def _truncate(self, column_name: str) -> str:
@@ -206,6 +207,22 @@ class DataFrameToYaml:
         return info
 
 
+def recursive_correction(df_: DataFrame, input_string: str) -> Table:
+    pattern = r"Conversion failed for column (\w+) with type"
+    match = re.search(pattern, input_string)
+    column_name = match.group(1)
+    msg = "the column {%s} will be converted to text" % column_name
+    print(msg)
+    df_[column_name] = df_[column_name].astype(str)
+    try:
+        return pa.Table.from_pandas(df_)
+    except pa.lib.ArrowTypeError as e:
+        iteration_match = re.search(pattern, (str(e).split(","))[-1])
+        iteration_column_name = iteration_match.group(1)
+        if column_name != iteration_column_name:
+            return recursive_correction(df_, (str(e).split(","))[-1])
+
+
 class DataSchema(DataFrameToYaml):
     def __init__(self, df: DataFrame):
         super().__init__(df)
@@ -275,7 +292,7 @@ class DataSchema(DataFrameToYaml):
         self.schema = schema
         return schema
 
-    def get_table(self):
+    def get_table(self) -> Table:
         try:
             table = pa.Table.from_pandas(self.df, schema=self.get_schema())
         except:
@@ -291,18 +308,22 @@ class DataSchema(DataFrameToYaml):
                     msg = "It was not possible to create the table\n"
                     msg += "Error: {%s}" % e
                     print(f"{warning_type}: {msg}")
-                    return None
+                    return recursive_correction(self.df, (str(e).split(","))[-1])
         return table
 
 
 if __name__ == "__main__":
     # Create a DataFrame
-    data = {"Name": ["John", "Alice", "Bob"], "Age": [25, 30, 35]}
+    data = {
+        "Name": ["Dani", "John", "Alice", "Bob"],
+        "Age": ["32", 25, 30, 35],
+        "Points": ["0", 1, 2, 3],
+    }
     df = pd.DataFrame(data)
     table_name = "test_table"
     data_handler = DataSchema(df)
     # data_handler.get_schema()
     table = data_handler.get_table()
-    column_handler = ColumnObfuscation(df)
+    column_handler = StandardColumns(df)
     df = column_handler.get_frame(write_to_cloud=False)
     breakpoint()
