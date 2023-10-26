@@ -3,6 +3,7 @@ name: Run linters
 on: 
   push:
     branches:
+      - 'main'
       - '*/*'
       - 'develop'
 

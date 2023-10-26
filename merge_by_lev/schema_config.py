@@ -215,7 +215,8 @@ def recursive_correction(df_: DataFrame, input_string: str) -> Table:
     print(msg)
     df_[column_name] = df_[column_name].astype(str)
     try:
-        return pa.Table.from_pandas(df_)
+        data_handler = DataSchema(df_)
+        return pa.Table.from_pandas(df_, schema=data_handler.get_schema())
     except pa.lib.ArrowTypeError as e:
         iteration_match = re.search(pattern, (str(e).split(","))[-1])
         iteration_column_name = iteration_match.group(1)
@@ -253,6 +254,8 @@ class DataSchema(DataFrameToYaml):
                 if col_type == "int64":
                     dtype = pa.int64()
                 elif col_type == "object":
+                    dtype = pa.string()
+                elif col_type == "string":
                     dtype = pa.string()
                 elif col_type == "float64":
                     dtype = pa.float64()
