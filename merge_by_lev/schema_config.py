@@ -255,8 +255,6 @@ class DataSchema(DataFrameToYaml):
                     dtype = pa.int64()
                 elif col_type == "object":
                     dtype = pa.string()
-                elif col_type == "string":
-                    dtype = pa.string()
                 elif col_type == "float64":
                     dtype = pa.float64()
                 elif col_type == "datetime64[ns]":
@@ -302,16 +300,12 @@ class DataSchema(DataFrameToYaml):
             try:
                 record_batch = pa.RecordBatch.from_pandas(self.df)
                 table = pa.Table.from_pandas(self.df)
-            except:
-                try:
-                    self.df = (self.df).convert_dtypes()
-                    table = pa.Table.from_pandas(self.df)
-                except pa.lib.ArrowTypeError as e:
-                    warning_type = "UserWarning"
-                    msg = "It was not possible to create the table\n"
-                    msg += "Error: {%s}" % e
-                    print(f"{warning_type}: {msg}")
-                    return recursive_correction(self.df, (str(e).split(","))[-1])
+            except pa.lib.ArrowTypeError as e:
+                warning_type = "UserWarning"
+                msg = "It was not possible to create the table\n"
+                msg += "Error: {%s}" % e
+                print(f"{warning_type}: {msg}")
+                return recursive_correction(self.df, (str(e).split(","))[-1])
         return table
 
 
