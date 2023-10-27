@@ -237,6 +237,7 @@ class DataSchema(DataFrameToYaml):
         connection_string: str = "",
         container_name: str = "",
         overwrite: bool = True,
+        preserve_order: bool = True,
     ):
         if format_type == "yaml":
             return self.create_yaml(
@@ -290,7 +291,13 @@ class DataSchema(DataFrameToYaml):
         if os.path.exists(schema_file_path):
             os.remove(schema_file_path)
 
+        if preserve_order:
+            try:
+                schema = pa.Schema.from_pandas(self.df)
+            except:
+                None
         self.schema = schema
+
         return schema
 
     def get_table(self) -> Table:
@@ -319,7 +326,7 @@ if __name__ == "__main__":
     df = pd.DataFrame(data)
     table_name = "test_table"
     data_handler = DataSchema(df)
-    # data_handler.get_schema()
+    schema = data_handler.get_schema()
     table = data_handler.get_table()
     column_handler = StandardColumns(df)
     df = column_handler.get_frame(write_to_cloud=False)
