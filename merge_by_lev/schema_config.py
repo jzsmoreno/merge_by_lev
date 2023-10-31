@@ -1,12 +1,13 @@
 import json
 
+import pyarrow
 import pyarrow as pa
 import yaml
+from pyarrow import Table
+from pydbsmgr.lightest import *
 from pydbsmgr.main import *
 from pydbsmgr.main import DataFrame
-from pydbsmgr.lightest import *
 from pydbsmgr.utils.azure_sdk import *
-from pyarrow import Table
 
 
 class StandardColumns:
@@ -217,7 +218,7 @@ def recursive_correction(df_: DataFrame, input_string: str) -> Table:
     try:
         data_handler = DataSchema(df_)
         return pa.Table.from_pandas(df_, schema=data_handler.get_schema())
-    except pa.lib.ArrowTypeError as e:
+    except (pa.lib.ArrowTypeError, pyarrow.lib.ArrowInvalid) as e:
         iteration_match = re.search(pattern, (str(e).split(","))[-1])
         iteration_column_name = iteration_match.group(1)
         if column_name != iteration_column_name:
@@ -307,7 +308,7 @@ class DataSchema(DataFrameToYaml):
             try:
                 record_batch = pa.RecordBatch.from_pandas(self.df)
                 table = pa.Table.from_pandas(self.df)
-            except pa.lib.ArrowTypeError as e:
+            except (pa.lib.ArrowTypeError, pyarrow.lib.ArrowInvalid) as e:
                 warning_type = "UserWarning"
                 msg = "It was not possible to create the table\n"
                 msg += "Error: {%s}" % e
