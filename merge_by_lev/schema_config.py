@@ -107,9 +107,6 @@ class StandardColumns:
                 data=self.json_bytes,
                 overwrite=overwrite,
             )
-        else:
-            with open(json_name, "w") as file:
-                file.write(self.json_string)
 
     def _generate_dict(self, encoding: str) -> dict:
         """generates the dictionary that renames the columns of the `DataFrame`.
