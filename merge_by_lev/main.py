@@ -1,6 +1,7 @@
 import os
 import re
 import sys
+import warnings
 from functools import lru_cache
 from io import TextIOWrapper
 from typing import List, Tuple
@@ -324,9 +325,15 @@ def merge_by_similarity(
                             try:
                                 df_list[idx] = pd.concat([df_list[idx][cols], df_list[i][cols]])
                                 idx_to_exclude.append(i)
-                            except:
-                                None
+                            except pd.errors.InvalidIndexError as e:
+                                warning_type = "ValueError"
+                                msg = f"""Invalid Index Error encountered while merging dataframes. {e}."""
+                                print(f"{warning_type}: {msg}")
+                                sys.exit("Please check your column names.")
                         else:
+                            warning_type = "UserWarning"
+                            msg = f"DataFrame '{col_list[idx]}' does not contain enough matching columns.\n"
+                            print(f"{warning_type}: {msg}")
                             if merge_mode:
                                 if len(cols) > 0:
                                     try:
