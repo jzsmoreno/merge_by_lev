@@ -4,7 +4,7 @@ import sys
 import warnings
 from functools import lru_cache
 from io import TextIOWrapper
-from typing import List, Tuple
+from typing import Any, List, Tuple
 
 import numpy as np
 import pandas as pd
@@ -259,6 +259,7 @@ def merge_by_similarity(
     merge_mode: bool = False,
     manually: bool = False,
     drop_empty: bool = False,
+    stdout: Any = sys.stdout,
 ) -> Tuple[List[DataFrame], List[str], ndarray]:
     """
     It makes use of the levenshtein distance to calculate
@@ -282,7 +283,7 @@ def merge_by_similarity(
     idx_to_exclude = []
     full_col_list_idx = list(range(len(col_list)))
     count = 0
-    for idx in progressbar(range(len(col_list)), "Computing: "):
+    for idx in progressbar(range(len(col_list)), "Computing: ", out=stdout):
         for i in full_col_list_idx:
             if idx != i:
                 if i not in idx_to_exclude:
