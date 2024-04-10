@@ -1,5 +1,5 @@
 numpy
 pandas
 tabulate
-git+https://github.com/jzsmoreno/pydbsmgr
+pydbsmgr
 pyarrow

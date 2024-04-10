@@ -8,11 +8,12 @@ from pydbsmgr.lightest import *
 from pydbsmgr.main import *
 from pydbsmgr.main import DataFrame
 from pydbsmgr.utils.azure_sdk import *
+import pandas as pd
 
 
 class StandardColumns:
-    """Allows generic column renaming and creates a `.json` file with the equivalent names.
-    Allows columns containing questions to be transformed according to `SQL` standards."""
+    """Allows columns to be transformed according to `SQL` standards
+    or creates a `.json` file with the obfuscated columns."""
 
     def __init__(self, df: DataFrame) -> None:
         self.df = df.copy()
@@ -20,18 +21,19 @@ class StandardColumns:
     def get_frame(
         self,
         json_name: str = "output.json",
-        write_to_cloud: bool = True,
+        write_to_cloud: bool = False,
         connection_string: str = "",
         container_name: str = "",
         overwrite: bool = True,
         encoding: str = "utf-8",
         get_standard: bool = True,
+        **kwargs,
     ) -> DataFrame:
-        """Returns the `DataFrame` with the obfuscated columns.
+        """Returns the `DataFrame` with the obfuscated columns or SQL standard format.
 
         Args:
             json_name (`str`, optional): name of the dictionary `.json` file. By default it is set to `output.json`.
-            write_to_cloud (`bool`, optional): boolean variable to write to an Azure storage account. By default it is set to `True`.
+            write_to_cloud (`bool`, optional): boolean variable to write to an Azure storage account. By default it is set to `False`.
             connection_string (`str`, optional): the connection string to storage account. By default it is set to "".
             container_name (`str`, optional): Azure container name. By default it is set to "".
             overwrite (`bool`, optional): boolean variable that indicates whether to overwrite. By default it is set to `True`.
@@ -40,27 +42,56 @@ class StandardColumns:
 
         Returns:
             `DataFrame`: `DataFrame` with changed columns
+
+        Keyword Arguments:
+        ----------
+        - snake_case (`bool`, optional): If true - transforms column names into snake
+            case otherwise camel case will be used. Default is `True`.
+        - sort (`bool`, optional): If true - sorts columns by their names in alphabetical order.
+            Default is `False`.
+        - surrounding (`bool`, optional): If true - removes brackets from column names before transformation.
+            Default is `True`.
         """
         self._generate_dict(encoding)
         self._writer(json_name, write_to_cloud, connection_string, container_name, overwrite)
         if get_standard:
-            df_renamed = self._sql_standards()
+            df_renamed = self._sql_standards(**kwargs)
         else:
             df_renamed = (self.df).rename(columns=self.obfuscator)
         return df_renamed
 
-    def _sql_standards(self) -> DataFrame:
+    def _sql_standards(
+        self, snake_case: bool = True, sort: bool = False, surrounding: bool = True
+    ) -> DataFrame:
+        """Transforms all column names into SQL standard format.
+
+        Args:
+            snake_case (`bool`, optional): If true - transforms column names into snake
+            case otherwise camel case will be used. Default is `True`.
+            sort (`bool`, optional): If true - sorts columns by their names in alphabetical order.
+            Default is `False`.
+            surrounding (`bool`, optional): If true - removes brackets from column names before transformation.
+            Default is `True`.
+        Returns:
+            `DataFrame`: `DataFrame` with transformed columns.
+
+        """
         df = (self.df).copy()
+        if surrounding:
+            df.columns = [col[1:-1] for col in df.columns]
         df.columns = df.columns.str.lower()
-        df.columns = df.columns.str.replace("_", " ")
-        df.columns = df.columns.str.replace("__", " ")
+        df.columns = df.columns.str.replace("_+", " ", regex=True)
         df.columns = df.columns.str.title()
         df.columns = df.columns.str.strip()
         df.columns = df.columns.str.replace(" ", "")
         df.columns = df.columns.str.replace("\n", "_")
-        df.columns = [self._camel_to_snake(col) for col in df.columns]
+        if snake_case:
+            df.columns = [self._camel_to_snake(col) for col in df.columns]
         df.columns = [self._truncate(col) for col in df.columns]
-        # df = self._sort_columns_by_length(df)
+        if sort:
+            df = self._sort_columns_by_length(df)
+        if surrounding:
+            df.columns = [f"[{col}]" for col in df.columns]
         return df
 
     def _truncate(self, column_name: str) -> str:
@@ -327,5 +358,5 @@ if __name__ == "__main__":
     schema = data_handler.get_schema()
     table = data_handler.get_table()
     column_handler = StandardColumns(df)
-    df = column_handler.get_frame(write_to_cloud=False)
+    df = column_handler.get_frame(surrounding=False)
     breakpoint()
