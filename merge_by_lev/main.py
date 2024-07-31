@@ -18,7 +18,7 @@ from merge_by_lev.tools import check_empty_df
 
 def progressbar(
     it: range, prefix: str = "", size: int = 40, out: TextIOWrapper = sys.stdout
-) -> None:
+) -> None:  # type: ignore
     """
     Auxiliary function displaying a progress bar.
     """
@@ -52,27 +52,29 @@ def clearConsole() -> None:
 
 def check_cols_to_match(dict_dfs: dict[DataFrame], df_names: List[DataFrame]) -> None:
     """
-    Receives a dictionary of dataframes (dict_dfs) and a list of dataframe names (dfs_names).
+    Receives a dictionary of dataframes (`dict_dfs`) and a list of dataframe names (`dfs_names`).
     Then check if the dataframes have the same columns. Print the data frames that do not match.
 
     Parameters
-    ------
-        dict_dfs : `Dictionary` 
-            Contains the dataframes to be analyzed.
-        df_names : `List` : 
-            Contains the keys (names of each dataframe) of the dictionary.
+    ----------
+    dict_dfs : `dict`
+        Contains the dataframes to be analyzed.
+    df_names : `List`
+        Contains the keys (names of each dataframe) of the dictionary.
 
     Returns
     -------
-        This function returns a summary of the condition of the columns
+    This function returns a summary of the condition of the columns
 
     Example
     -------
-        dfs -> (`List` of dataframes)
-        names -> (`List` of names)
-        dict_dfs = {name:df for df, name in zip(dfs, names)}
-        check_cols_to_match(dict_dfs, df_names)
-        >>
+    ```
+    dfs -> List[DataFrame]
+    names -> List[str]
+    dict_dfs = {name:df for df, name in zip(dfs, names)}
+    check_cols_to_match(dict_dfs, df_names)
+    >>
+    ```
     """
     cols_set = set([col for name in df_names for col in dict_dfs[name].columns])
     for name in df_names:
@@ -96,20 +98,21 @@ def rename_cols(df: DataFrame) -> DataFrame:
 
     Parameters
     ----------
-        df : `Dataframe` 
-            The dataframe on which you want to operate.
+    df : `Dataframe`
+        The dataframe on which you want to operate.
 
     Returns
-    --------
-        df : `Dataframe`
-            The same df dataframe with the consolidated columns.
+    -------
+    df : `Dataframe`
+        The same df dataframe with the consolidated columns.
 
     Example
     --------
-        df_1 = df_1.merge(df_2, how = 'left')
-
-        df_1 = rename_cols(df_1)
-        >>
+    ```
+    df_1 = df_1.merge(df_2, how = 'left')
+    df_1 = rename_cols(df_1)
+    >>
+    ```
     """
     cols = []
     for i in df.columns:
@@ -135,21 +138,23 @@ def clean_names(x: str, pattern: str = r"[a-zA-Zñáéíóú_]+\b") -> str:
 
     Parameters
     ----------
-        x : `String`
-            Character string to which a regular expression is to be applied.
-        pattern : `regex`
-            By default extracts names without numerical characters.
+    x : `str`
+        Character string to which a regular expression is to be applied.
+    pattern : `regex`
+        By default extracts names without numerical characters.
 
     Returns
     -------
-        result : `String`
-            The clean text string
+    result : `str`
+        The clean text string.
 
     Example
     -------
-        x = 'stamp_1'
-        clean_names(x)
-        >> 'stamp'
+    ```
+    x = 'stamp_1'
+    clean_names(x)
+    >> 'stamp'
+    ```
     """
     result = re.findall(pattern, str(x).replace("_", ""))
     if len(result) > 0:
@@ -164,25 +169,27 @@ def clean_names(x: str, pattern: str = r"[a-zA-Zñáéíóú_]+\b") -> str:
 def lev_dist(a: str, b: str) -> int:
     """
     This function will calculate the levenshtein distance between two input
-    strings a and b.
+    strings `a` and `b`.
 
     Parameters
     ----------
-        a : `String` 
-            The first string you want to compare
-        b : `String` 
-            The second string you want to compare
+    a : `str`
+        The first string you want to compare
+    b : `str`
+        The second string you want to compare
 
     Returns
     -------
-        This function will return the distnace between string a and b.
+    This function will return the distnace between string `a` and `b`.
 
     Example
     -------
-        a = 'stamp'
-        b = 'stomp'
-        lev_dist(a,b)
-        >> 1.0
+    ```
+    a = 'stamp'
+    b = 'stomp'
+    lev_dist(a,b)
+    >> 1.0
+    ```
     """
 
     @lru_cache(None)  # for memorization
@@ -209,13 +216,13 @@ def cal_cols_similarity(col_list: List[str]) -> ndarray:
 
     Parameters
     ----------
-        col_list : `List`
-            List with the chars names.
+    col_list : `List`
+        List with the chars names.
 
     Returns
     --------
-        mtx : `np.array` 
-            Matrix of $n$ x $n$ containing the results for $n$ chars.
+    mtx : `np.array`
+        Matrix of $n$ x $n$ containing the results for $n$ chars.
 
     Example
     --------
@@ -233,17 +240,17 @@ def cal_cols_similarity(col_list: List[str]) -> ndarray:
 def create_table_tabular(df1: DataFrame, df2: DataFrame) -> List[List[str]]:
     """Create a table for column names from two dataframes.
 
-    Args
-    ----
-        df1 : `DataFrame` 
-            First dataframe
-        df2 : `DataFrame` 
-            Second dataframe
+    Parameters
+    ----------
+    df1 : `DataFrame`
+        First dataframe
+    df2 : `DataFrame`
+        Second dataframe
 
     Returns
     -------
-        List[List[`str`]]
-            List of rows for each of the columns of both dataframes.
+    List[List[`str`]]
+        List of rows for each of the columns of both dataframes.
     """
     table = []
     col_names_df1 = df1.columns
@@ -259,19 +266,19 @@ def create_table_tabular(df1: DataFrame, df2: DataFrame) -> List[List[str]]:
 def rename_cols_dict(df_name: str, df: DataFrame, cols: list) -> DataFrame:
     """Function that allows to rename a segment of columns of a dataframe from a list as input.
 
-    Args
-    ----
-        df_name : `str`
-            Name of dataframe.
-        df : `DataFrame` 
-            Dataframe whose columns names will be changed.
-        cols : `list` 
-            List indicating the names of the columns to be changed.
+    Parameters
+    ----------
+    df_name : `str`
+        Name of dataframe.
+    df : `DataFrame`
+        Dataframe whose columns names will be changed.
+    cols : `list`
+        List indicating the names of the columns to be changed.
 
     Returns
-    ------
-        `DataFrame` 
-            Processed dataframe with changed names.
+    -------
+    `DataFrame`
+        Processed dataframe with changed names.
     """
     if not cols:
         return df
@@ -300,26 +307,26 @@ def merge_by_similarity(
     stdout: Any = sys.stdout,
 ) -> Tuple[List[DataFrame], List[str], ndarray]:
     """
-    It makes use of the levenshtein distance to calculate
+    It makes use of the `lev_dist` to calculate
     a similarity between dataframes according to a list of names
     to concatenate them or make a left join (if merge_mode = `True`).
 
     Parameters
-    ---------
-        df_list : `List of Dataframes` 
-            The list of dataframes to be used in the process.
-        col_list : `List of chars`
-            The list of dataframe names.
-        dist_min : `int`
-            Minimum distance to determine that they are equal. By default is set to `2`.
-        match_cols : `int`
-            Minimum number of columns to concatenate. By default is set to `2`.
-        merge_mode : `Boolean`
-            If True, it seeks to take the largest dataframe and make a left join with those that share columns with each other.
-        manually : `Boolean` 
-            If False avoids inputs when there are differences in columns. By default is set to False.
-        drop_empty : `Boolean` 
-            If True, identify frames with few columns and rows to be discarded. By default is set to False.
+    ----------
+    df_list : `List` | `Dataframes`
+        The list of dataframes to be used in the process.
+    col_list : `List[str]`
+        The list of dataframe names.
+    dist_min : `int`
+        Minimum distance to determine that they are equal. By default is set to `2`.
+    match_cols : `int`
+        Minimum number of columns to concatenate. By default is set to `2`.
+    merge_mode : `bool`
+        If `True`, it seeks to take the largest dataframe and make a left join with those that share columns with each other.
+    manually : `bool`
+        If `False` avoids inputs when there are differences in columns. By default is set to `False`.
+    drop_empty : `bool`
+        If `True`, identify frames with few columns and rows to be discarded. By default is set to `False`.
     """
     if drop_empty:
         df_list, col_list = check_empty_df(df_list, col_list)

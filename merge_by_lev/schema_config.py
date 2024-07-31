@@ -31,26 +31,26 @@ class StandardColumns:
     ) -> DataFrame:
         """Returns the `DataFrame` with the obfuscated columns or SQL standard format.
 
-        Args
-        ----
+        Parameters
+        ----------
             json_name : `str`, optional
-                Name of the dictionary .json file. By default it is set to output.json.
+                Name of the dictionary `.json` file. By default it is set to `output.json`.
             write_to_cloud : `bool`, optional
-                Boolean variable to write to an Azure storage account. By default it is set to False.
+                Boolean variable to write to an Azure storage account. By default it is set to `False`.
             connection_string : `str`, optional
-                The connection string to storage account. By default it is set to "".
+                The connection string to storage account.
             container_name : `str`, optional
-                Azure container name. By default it is set to "".
+                Azure container name.
             overwrite : `bool`, optional
-                Boolean variable that indicates whether to overwrite. By default it is set to True.
+                Boolean variable that indicates whether to overwrite. By default it is set to `True`.
             encoding : `str`, optional
                 File coding. By default it is set to `utf-8`.
             get_standard : `bool`, optional
-                Instead of obfuscation returns the columns with SQL standards. By default it is set to True.
+                Instead of obfuscation returns the columns with SQL standards. By default it is set to `True`.
 
         Returns
         -------
-            `DataFrame`: 
+            `DataFrame`:
                 DataFrame with changed columns
 
         Keyword Arguments
@@ -75,8 +75,8 @@ class StandardColumns:
     ) -> DataFrame:
         """Transforms all column names into SQL standard format.
 
-        Args
-        ----
+        Parameters
+        ----------
             snake_case : `bool`, optional
                 If true - transforms column names into snake case otherwise camel case will be used. Default is `True`.
             sort : `bool`, optional
@@ -86,7 +86,7 @@ class StandardColumns:
 
         Returns
         -------
-            `DataFrame`: 
+            `DataFrame`:
                 `DataFrame` with transformed columns.
 
         """
@@ -131,8 +131,8 @@ class StandardColumns:
     ) -> None:
         """Writer of the json file.
 
-        Args
-        ----
+        Parameters
+        ----------
             json_name : `str`
                 Name of the dictionary `.json` file.
             write_to_cloud : `bool`
@@ -157,14 +157,14 @@ class StandardColumns:
     def _generate_dict(self, encoding: str) -> dict:
         """Generates the dictionary that renames the columns of the `DataFrame`.
 
-        Args
-        ----
+        Parameters
+        ----------
             encoding : `str`
                 File coding.
 
         Returns
         -------
-            `dict`: 
+            `dict`:
                 Dictionary to rename columns.
         """
         values = []
@@ -198,20 +198,20 @@ class DataFrameToYaml:
     ) -> str:
         """Function that generates the schema of a `DataFrame` in a `.yml` file.
 
-        Args:
+        Parameters
         ----------
             dabase_name : `str`, optional
                 Dataframe name. By default it is set to database.
             yaml_name : `str`, optional
-                Output name of the .yml file. By default it is set to output.yml.
+                Output name of the `.yml` file. By default it is set to `output.yml`.
             write_to_cloud : `bool`, optional
-                Boolean type variable indicating whether or not to write to the cloud. By default it is set to False.
+                Boolean type variable indicating whether or not to write to the cloud. By default it is set to `False`.
             connection_string : `str`, optional
-                Storage account and container connection string. By default it is set to "".
+                Storage account and container connection string.
             container_name : `str`, optional
-                Name of the container inside the storage account. By default it is set to "".
-            overwrite : `bool`, optional 
-                Boolean variable indicating whether the file is overwritten or not. By default it is set to True.
+                Name of the container inside the storage account.
+            overwrite : `bool`, optional
+                Boolean variable indicating whether the file is overwritten or not. By default it is set to `True`.
         """
         self.df.columns = [
             c.replace(" ", "_") for c in list(self.df.columns)

@@ -19,19 +19,19 @@ class QualityAssesment:
     ) -> DataFrame:
         """Function that returns the report generated
 
-        Args
-        ----
-            df_names : `List[str]` 
-                list of dataframes, which are the tables.
-            report_name : `str`, optional
-                name and path to be used to save the report. By default is set to ./report-health-checker.html.
-            encoding : `str`, optional
-                type of report encoding. By default is set to latin1.
+        Parameters
+        ----------
+        df_names : `List[str]`
+            list of dataframes, which are the tables.
+        report_name : `str`, optional
+            name and path to be used to save the report. By default is set to ./report-health-checker.html.
+        encoding : `str`, optional
+            type of report encoding. By default is set to latin1.
 
         Returns
         -------
-            DataFrame: 
-                `DataFrame` of the generated report
+        DataFrame :
+            `DataFrame` of the generated report.
         """
         df_sheet_files_info = self._iterative_evaluation(df_names)
         df_sheet_files_info.to_html(report_name, index=False, encoding=encoding)
@@ -42,15 +42,15 @@ class QualityAssesment:
     def _iterative_evaluation(self, df_names: List[str]) -> DataFrame:
         """Function that iterates over the set of tables to build the report
 
-        Args
-        ----
-            df_names : `List[str]`
-                List of names of the tables on which it iterates.
+        Parameters
+        ----------
+        df_names : `List[str]`
+            List of names of the tables on which it iterates.
 
         Returns
-        ------
-            `DataFrame`: 
-                Eeport generated from the set of tables.
+        -------
+        `DataFrame` :
+            Report generated from the set of tables.
         """
         df_sheet_files_info = pd.DataFrame()
         for i, df in enumerate(self.dfs):
@@ -101,19 +101,19 @@ def check_empty_df(
 ) -> Tuple[List[DataFrame], List[str]]:
     """Check if the `DataFrame` is empty or not
 
-    Args
-    ----
-        dfs : `List[DataFrame]`
-            List of dataframes to iterate over
-        names : `List[str]`
-            List of DataFrame names
-        num_cols : `int`
-            Minimum number of columns of a DataFrame. By default is set to 2.
+    Parameters
+    ----------
+    dfs : `List[DataFrame]`
+        List of dataframes to iterate over.
+    names : `List[str]`
+        List of DataFrame names.
+    num_cols : `int`
+        Minimum number of columns of a DataFrame. By default is set to 2.
 
     Returns
     -------
-        `Tuple[List[DataFrame], List[str]]`
-            Verified dataframes and names.
+    `Tuple[List[DataFrame], List[str]]` :
+        Verified dataframes and names.
     """
     new_dfs = []
     new_names = []
