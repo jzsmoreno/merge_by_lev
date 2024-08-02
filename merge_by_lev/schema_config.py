@@ -33,34 +33,37 @@ class StandardColumns:
 
         Parameters
         ----------
-            json_name : `str`, optional
-                Name of the dictionary `.json` file. By default it is set to `output.json`.
-            write_to_cloud : `bool`, optional
-                Boolean variable to write to an Azure storage account. By default it is set to `False`.
-            connection_string : `str`, optional
-                The connection string to storage account.
-            container_name : `str`, optional
-                Azure container name.
-            overwrite : `bool`, optional
-                Boolean variable that indicates whether to overwrite. By default it is set to `True`.
-            encoding : `str`, optional
-                File coding. By default it is set to `utf-8`.
-            get_standard : `bool`, optional
-                Instead of obfuscation returns the columns with SQL standards. By default it is set to `True`.
+        json_name : `str`, optional
+            Name of the dictionary `.json` file. By default it is set to `output.json`.
+        write_to_cloud : `bool`, optional
+            Boolean variable to write to an Azure storage account. By default it is set to `False`.
+        connection_string : `str`, optional
+            The connection string to storage account.
+        container_name : `str`, optional
+            Azure container name.
+        overwrite : `bool`, optional
+            Boolean variable that indicates whether to overwrite. By default it is set to `True`.
+        encoding : `str`, optional
+            File coding. By default it is set to `utf-8`.
+        get_standard : `bool`, optional
+            Instead of obfuscation returns the columns with SQL standards. By default it is set to `True`.
 
         Returns
         -------
-            `DataFrame`:
-                DataFrame with changed columns
+        `DataFrame`:
+            DataFrame with changed columns
 
         Keyword Arguments
         ----------
-            snake_case : `bool`, optional
-                If true - transforms column names into snake case otherwise camel case will be used. Default is True.
-            sort :`bool`, optional
-                If true - sorts columns by their names in alphabetical order. Default is False.
-            surrounding : `bool`, optional
-                If true - removes brackets from column names before transformation. Default is True.
+        - snake_case : `bool`, optional
+
+            If `True` - transforms column names into snake case otherwise camel case will be used. Default is True.
+        - sort :`bool`, optional
+
+            If `True` - sorts columns by their names in alphabetical order. Default is False.
+        - surrounding : `bool`, optional
+
+            If `True` - removes brackets from column names before transformation. Default is True.
         """
         self._generate_dict(encoding)
         self._writer(json_name, write_to_cloud, connection_string, container_name, overwrite)
@@ -77,18 +80,17 @@ class StandardColumns:
 
         Parameters
         ----------
-            snake_case : `bool`, optional
-                If true - transforms column names into snake case otherwise camel case will be used. Default is `True`.
-            sort : `bool`, optional
-                If true - sorts columns by their names in alphabetical order. Default is `False`.
-            surrounding : `bool`, optional
-                If true - removes brackets from column names before transformation. Default is `True`.
+        snake_case : `bool`, optional
+            If `True` - transforms column names into snake case otherwise camel case will be used. Default is `True`.
+        sort : `bool`, optional
+            If `True` - sorts columns by their names in alphabetical order. Default is `False`.
+        surrounding : `bool`, optional
+            If `True` - removes brackets from column names before transformation. Default is `True`.
 
         Returns
         -------
-            `DataFrame`:
-                `DataFrame` with transformed columns.
-
+        `DataFrame` :
+            `DataFrame` with transformed columns.
         """
         df = (self.df).copy()
         df.columns = [
@@ -133,16 +135,16 @@ class StandardColumns:
 
         Parameters
         ----------
-            json_name : `str`
-                Name of the dictionary `.json` file.
-            write_to_cloud : `bool`
-                Boolean variable to write to an Azure storage account.
-            connection_string : `str`
-                The connection string to storage account.
-            container_name : `str`
-                Azure container name.
-            overwrite : `bool`
-                Boolean variable that indicates whether to overwrite.
+        json_name : `str`
+            Name of the dictionary `.json` file.
+        write_to_cloud : `bool`
+            Boolean variable to write to an Azure storage account.
+        connection_string : `str`
+            The connection string to storage account.
+        container_name : `str`
+            Azure container name.
+        overwrite : `bool`
+            Boolean variable that indicates whether to overwrite.
         """
         if write_to_cloud:
             blob_service_client = BlobServiceClient.from_connection_string(connection_string)
@@ -159,13 +161,13 @@ class StandardColumns:
 
         Parameters
         ----------
-            encoding : `str`
-                File coding.
+        encoding : `str`
+            File coding.
 
         Returns
         -------
-            `dict`:
-                Dictionary to rename columns.
+        `dict` :
+            Dictionary to rename columns.
         """
         values = []
         keys = []
@@ -200,18 +202,18 @@ class DataFrameToYaml:
 
         Parameters
         ----------
-            dabase_name : `str`, optional
-                Dataframe name. By default it is set to database.
-            yaml_name : `str`, optional
-                Output name of the `.yml` file. By default it is set to `output.yml`.
-            write_to_cloud : `bool`, optional
-                Boolean type variable indicating whether or not to write to the cloud. By default it is set to `False`.
-            connection_string : `str`, optional
-                Storage account and container connection string.
-            container_name : `str`, optional
-                Name of the container inside the storage account.
-            overwrite : `bool`, optional
-                Boolean variable indicating whether the file is overwritten or not. By default it is set to `True`.
+        dabase_name : `str`, optional
+            Dataframe name. By default it is set to database.
+        yaml_name : `str`, optional
+            Output name of the `.yml` file. By default it is set to `output.yml`.
+        write_to_cloud : `bool`, optional
+            Boolean type variable indicating whether or not to write to the cloud. By default it is set to `False`.
+        connection_string : `str`, optional
+            Storage account and container connection string.
+        container_name : `str`, optional
+            Name of the container inside the storage account.
+        overwrite : `bool`, optional
+            Boolean variable indicating whether the file is overwritten or not. By default it is set to `True`.
         """
         self.df.columns = [
             c.replace(" ", "_") for c in list(self.df.columns)
