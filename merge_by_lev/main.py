@@ -1,4 +1,5 @@
 import os
+import platform
 import re
 import sys
 import warnings
@@ -20,18 +21,24 @@ def progressbar(
     it: range, prefix: str = "", size: int = 40, out: TextIOWrapper = sys.stdout
 ) -> None:  # type: ignore
     """
-    Auxiliary function displaying a progress bar.
+    Displays a progress bar in the console.
+
+    Parameters
+    ----------
+    it : `range`
+        The iterable to track progress on.
+    prefix : `str`, optional
+        Prefix text for the progress bar. Default is an empty string.
+    size : `int`, optional
+        Width of the progress bar. Default is 40 characters.
+    out : `TextIOWrapper`, optional
+        Output stream where the progress bar will be displayed. Default is `sys.stdout`.
     """
     count = len(it)
 
-    def show(j):
+    def show(j: int) -> None:
         x = int(size * j / count)
-        print(
-            "{}[{}{}] {}/{}".format(prefix, "#" * x, "." * (size - x), j, count),
-            end="\r",
-            file=out,
-            flush=True,
-        )
+        print(f"{prefix}[{'#' * x}{'.' * (size - x)}] {j}/{count}", end="\r", file=out, flush=True)
 
     show(0)
     for i, item in enumerate(it):
@@ -40,221 +47,162 @@ def progressbar(
     print("\n", flush=True, file=out)
 
 
-def clearConsole() -> None:
+def clear_console() -> None:
     """
-    Auxiliary function that cleans the console.
+    Clears the console screen.
+
+    This function uses platform-specific commands to clear the console screen.
+    It supports Unix-like systems and Windows.
     """
-    command = "clear"
-    if os.name in ("nt", "dos"):
-        command = "cls"
+    command = "clear" if platform.system() != "Windows" else "cls"
     os.system(command)
 
 
-def check_cols_to_match(dict_dfs: dict[DataFrame], df_names: List[DataFrame]) -> None:
+def check_cols_to_match(dict_dfs: dict[str, DataFrame], df_names: List[str]) -> None:
     """
-    Receives a dictionary of dataframes (`dict_dfs`) and a list of dataframe names (`dfs_names`).
-    Then check if the dataframes have the same columns. Print the data frames that do not match.
+    Checks if the dataframes in the dictionary have matching columns.
 
     Parameters
     ----------
     dict_dfs : `dict`
-        Contains the dataframes to be analyzed.
-    df_names : `List`
-        Contains the keys (names of each dataframe) of the dictionary.
+        Dictionary mapping dataframe names to DataFrames.
+    df_names : `List[str]`
+        List of dataframe names to check.
 
     Returns
     -------
-    This function returns a summary of the condition of the columns
+    None
 
-    Example
-    -------
-    ```
-    dfs -> List[DataFrame]
-    names -> List[str]
-    dict_dfs = {name:df for df, name in zip(dfs, names)}
-    check_cols_to_match(dict_dfs, df_names)
-    >>
-    ```
+    Prints the result for each dataframe indicating whether it has matching columns.
     """
-    cols_set = set([col for name in df_names for col in dict_dfs[name].columns])
+    cols_set = set().union(*(set(df.columns) for name in df_names for df in dict_dfs.values()))
+
     for name in df_names:
         col_set = set(dict_dfs[name].columns)
         if col_set == cols_set:
-            print(name + " -> Passed")
+            print(f"{name} -> Passed")
         else:
-            print(name + " -> Not Passed")
+            print(f"{name} -> Not Passed")
             print(f"Columns do not match -> {cols_set - col_set}")
-            print(f"Original columns -> {col_set}")
-            print("\n")
+            print(f"Original columns -> {col_set}\n")
 
 
-# https://github.com/jzsmoreno/Workflow.git
-# auxiliary function to rename columns after each match
 def rename_cols(df: DataFrame) -> DataFrame:
     """
-    Operates on a dataframe resulting from a join.
-    Identifying the cases in which there was a renaming of similar columns
-    with different information, consolidating them.
+    Renames columns in the dataframe after merging to consolidate similar columns.
 
     Parameters
     ----------
-    df : `Dataframe`
-        The dataframe on which you want to operate.
+    df : `DataFrame`
+        The dataframe to operate on.
 
     Returns
     -------
-    df : `Dataframe`
-        The same df dataframe with the consolidated columns.
-
-    Example
-    --------
-    ```
-    df_1 = df_1.merge(df_2, how = 'left')
-    df_1 = rename_cols(df_1)
-    >>
-    ```
+    `DataFrame`
+        The dataframe with consolidated and renamed columns.
     """
-    cols = []
-    for i in df.columns:
-        cols.append(i.replace("_x", ""))
-        cols.append(i.replace("_y", ""))
+    cols = set(col.replace("_x", "").replace("_y", "") for col in df.columns)
 
-    cols = [*set(cols)]
+    rename_dict = {f"{col}_x": col for col in cols if f"{col}_x" in df.columns}
+    drop_cols = [f"{col}_y" for col in cols if f"{col}_y" in df.columns]
 
-    for i in cols:
-        try:
-            df[i + "_x"] = df[i + "_x"].fillna(df[i + "_y"])
-            df = df.drop(columns=[i + "_y"])
-            df.rename(columns={i + "_x": i}, inplace=True)
-        except:
-            None
+    df.rename(columns=rename_dict, inplace=True)
+    df.drop(columns=drop_cols, inplace=True)
 
     return df
 
 
-def clean_names(x: str, pattern: str = r"[a-zA-Zñáéíóú_]+\b") -> str:
+def clean_names(x: str, pattern: str = r"[a-zA-Zñáéíóú]*") -> str:
     """
-    Receives a string for cleaning to be used in merge_by_similarity function.
+    Cleans the input string to extract only alphabetic characters and Spanish accented vowels.
 
     Parameters
     ----------
     x : `str`
-        Character string to which a regular expression is to be applied.
-    pattern : `regex`
-        By default extracts names without numerical characters.
+        The input string to clean.
+    pattern : `regex`, optional
+        Regex pattern to apply for cleaning. Defaults to extracting alphabetic characters and accented vowels.
 
     Returns
     -------
-    result : `str`
-        The clean text string.
-
-    Example
-    -------
-    ```
-    x = 'stamp_1'
-    clean_names(x)
-    >> 'stamp'
-    ```
+    `str`
+        The cleaned string containing only the specified characters.
     """
-    result = re.findall(pattern, str(x).replace("_", ""))
-    if len(result) > 0:
-        result = "_".join(result)
-    else:
-        pattern = r"[a-zA-Z]+"
-        result = re.findall(pattern, str(x).replace("_", ""))
-        result = "_".join(result)
-    return result
+    return "_".join(re.findall(pattern, x))
 
 
 def lev_dist(a: str, b: str) -> int:
     """
-    This function will calculate the levenshtein distance between two input
-    strings `a` and `b`.
+    Calculates the Levenshtein distance between two input strings.
 
     Parameters
     ----------
     a : `str`
-        The first string you want to compare
+        The first string to compare.
     b : `str`
-        The second string you want to compare
+        The second string to compare.
 
     Returns
     -------
-    This function will return the distnace between string `a` and `b`.
-
-    Example
-    -------
-    ```
-    a = 'stamp'
-    b = 'stomp'
-    lev_dist(a,b)
-    >> 1.0
-    ```
+    `int`
+        The Levenshtein distance between the two strings.
     """
 
-    @lru_cache(None)  # for memorization
-    def min_dist(s1, s2):
+    @lru_cache(None)
+    def min_dist(s1: int, s2: int) -> int:
         if s1 == len(a) or s2 == len(b):
             return len(a) - s1 + len(b) - s2
 
-        # no change required
         if a[s1] == b[s2]:
             return min_dist(s1 + 1, s2 + 1)
 
-        return 1 + min(
-            min_dist(s1, s2 + 1),  # insert character
-            min_dist(s1 + 1, s2),  # delete character
-            min_dist(s1 + 1, s2 + 1),  # replace character
-        )
+        return 1 + min(min_dist(s1, s2 + 1), min_dist(s1 + 1, s2), min_dist(s1 + 1, s2 + 1))
 
     return min_dist(0, 0)
 
 
 def cal_cols_similarity(col_list: List[str]) -> ndarray:
     """
-    Calculate in pairs the levenshtein distance of the chars according to their name.
+    Calculates the pairwise Levenshtein distance between column names.
 
     Parameters
     ----------
-    col_list : `List`
-        List with the chars names.
+    col_list : `List[str]`
+        List of column names to compare.
 
     Returns
-    --------
-    mtx : `np.array`
-        Matrix of $n$ x $n$ containing the results for $n$ chars.
-
-    Example
-    --------
-        cal_cols_similarity(col_list)
-        >>
+    -------
+    `np.array`
+        Matrix containing the pairwise Levenshtein distances between column names.
     """
     n = len(col_list)
     mtx = np.zeros((n, n))
     for i in range(n):
         for j in range(i, n):
             mtx[i, j] = lev_dist(col_list[i], col_list[j])
+            mtx[j, i] = mtx[i, j]
     return mtx
 
 
 def create_table_tabular(df1: DataFrame, df2: DataFrame) -> List[List[str]]:
-    """Create a table for column names from two dataframes.
+    """
+    Creates a tabular representation of column names from two dataframes.
 
     Parameters
     ----------
     df1 : `DataFrame`
-        First dataframe
+        First dataframe.
     df2 : `DataFrame`
-        Second dataframe
+        Second dataframe.
 
     Returns
     -------
-    List[List[`str`]]
-        List of rows for each of the columns of both dataframes.
+    `List[List[str]]`
+        List of rows containing the column names of both dataframes.
     """
     table = []
-    col_names_df1 = df1.columns
-    col_names_df2 = df2.columns
+    col_names_df1 = df1.columns.tolist()
+    col_names_df2 = df2.columns.tolist()
     max_length = max(len(col_names_df1), len(col_names_df2))
     for i in range(max_length):
         col1 = col_names_df1[i] if i < len(col_names_df1) else ""
@@ -263,37 +211,33 @@ def create_table_tabular(df1: DataFrame, df2: DataFrame) -> List[List[str]]:
     return table
 
 
-def rename_cols_dict(df_name: str, df: DataFrame, cols: list) -> DataFrame:
-    """Function that allows to rename a segment of columns of a dataframe from a list as input.
+def rename_cols_dict(df_name: str, df: DataFrame, cols: List[str]) -> DataFrame:
+    """
+    Renames specified columns in a dataframe based on user input.
 
     Parameters
     ----------
     df_name : `str`
-        Name of dataframe.
+        Name of the dataframe.
     df : `DataFrame`
-        Dataframe whose columns names will be changed.
-    cols : `list`
-        List indicating the names of the columns to be changed.
+        Dataframe whose columns will be renamed.
+    cols : `List[str]`
+        List of column names to rename.
 
     Returns
     -------
     `DataFrame`
-        Processed dataframe with changed names.
+        Dataframe with renamed columns.
     """
     if not cols:
         return df
-    else:
-        print(f"Rename the columns of {df_name}")
-        string_list = []
-        for name in cols:
-            string = input(f"Enter name for {name}: ")
-            string_list.append(string)
-        # Create a dictionary with keys in cols and values in string_list
-        dict_rename = dict(zip(cols, string_list))
-        # Rename all the columns using the new dictionary created above
-        df = df.rename(columns=dict_rename)
-        print("Columns renamed!")
-        return df
+
+    print(f"Rename the columns of {df_name}")
+    string_list = [input(f"Enter name for {name}: ") for name in cols]
+    dict_rename = dict(zip(cols, string_list))
+    df = df.rename(columns=dict_rename)
+    print("Columns renamed!")
+    return df
 
 
 def merge_by_similarity(
@@ -307,116 +251,118 @@ def merge_by_similarity(
     stdout: Any = sys.stdout,
 ) -> Tuple[List[DataFrame], List[str], ndarray]:
     """
-    It makes use of the `lev_dist` to calculate
-    a similarity between dataframes according to a list of names
-    to concatenate them or make a left join (if merge_mode = `True`).
+    Merges dataframes based on column similarity using the Levenshtein distance.
 
     Parameters
     ----------
-    df_list : `List` | `Dataframes`
+    df_list : `List`[`DataFrame`]
         The list of dataframes to be used in the process.
     col_list : `List[str]`
-        The list of dataframe names.
-    dist_min : `int`
-        Minimum distance to determine that they are equal. By default is set to `2`.
-    match_cols : `int`
-        Minimum number of columns to concatenate. By default is set to `2`.
-    merge_mode : `bool`
-        If `True`, it seeks to take the largest dataframe and make a left join with those that share columns with each other.
-    manually : `bool`
-        If `False` avoids inputs when there are differences in columns. By default is set to `False`.
-    drop_empty : `bool`
-        If `True`, identify frames with few columns and rows to be discarded. By default is set to `False`.
+        The list of dataframe names corresponding to `df_list`.
+    dist_min : `int`, default=2
+        Minimum distance to determine that columns are similar.
+    match_cols : `int`, default=2
+        Minimum number of matching columns required for merging.
+    merge_mode : `bool`, default=False
+        If True, performs a left join on the largest dataframe with others having enough matching columns.
+    manually : `bool`, default=False
+        If False, avoids manual input when there are differences in columns.
+    drop_empty : `bool`, default=False
+        If True, discards frames with few columns and rows.
+
+    Returns
+    -------
+    `Tuple`[`List`[`DataFrame`], `List[str]`, `ndarray`]
+        - List of merged dataframes.
+        - List of names corresponding to the merged dataframes.
+        - Matrix of column similarity distances.
     """
     if drop_empty:
         df_list, col_list = check_empty_df(df_list, col_list)
+
     mtx = cal_cols_similarity(col_list)
     new_df_list = []
     new_col_list = []
     idx_to_exclude = []
     full_col_list_idx = list(range(len(col_list)))
     count = 0
+
     for idx in progressbar(range(len(col_list)), "Computing: ", out=stdout):
         for i in full_col_list_idx:
-            if idx != i:
-                if i not in idx_to_exclude:
-                    if lev_dist(col_list[idx], col_list[i]) < dist_min:
-                        cols_x = set(df_list[idx].columns)
-                        cols_y = set(df_list[i].columns)
-                        cols = list(cols_x.intersection(cols_y))
-                        if len(cols_x) != len(cols_y):
-                            warning_type = "UserWarning"
-                            msg = "You may have missed some of the columns.\n"
-                            print(f"{warning_type}: {msg}")
-                            if manually:
-                                print("The columns that will be lost in each DataFrame are : \n")
-                                diff_x = [c for c in cols_x - cols_y]
-                                diff_y = [c for c in cols_y - cols_x]
-                                print("Columns in", col_list[idx], ":", diff_x)
-                                print("\n")
-                                print("Columns in", col_list[i], ":", diff_y)
-                                rename_manually = input("You want to rename the columns [y/n] : ")
-                                table_data = create_table_tabular(df_list[idx], df_list[i])
-                                headers = [col_list[idx], col_list[i]]
-                                print(
-                                    "########################################################################################"
-                                )
-                                print("The total number of columns in each DataFrame is : ")
-                                print(tabulate(table_data, headers=headers, tablefmt="grid"))
-                                if rename_manually == "y":
-                                    df_list[idx] = rename_cols_dict(
-                                        col_list[idx], df_list[idx], diff_x
-                                    )
-                                    print(
-                                        "########################################################################################"
-                                    )
-                                    df_list[i] = rename_cols_dict(col_list[i], df_list[i], diff_y)
-                                    cols_x = set(df_list[idx].columns)
-                                    cols_y = set(df_list[i].columns)
-                                    cols = list(cols_x.intersection(cols_y))
+            if idx != i and i not in idx_to_exclude:
+                if lev_dist(col_list[idx], col_list[i]) < dist_min:
+                    cols_x = set(df_list[idx].columns)
+                    cols_y = set(df_list[i].columns)
+                    cols = list(cols_x.intersection(cols_y))
 
-                        if len(cols) >= match_cols:
-                            try:
-                                df_list[idx] = pd.concat([df_list[idx][cols], df_list[i][cols]])
-                                idx_to_exclude.append(i)
-                            except pd.errors.InvalidIndexError as e:
-                                warning_type = "ValueError"
-                                msg = f"""Invalid Index Error encountered while merging dataframes. {e}."""
-                                print(f"{warning_type}: {msg}")
-                                sys.exit("Please check your column names.")
-                        else:
-                            warning_type = "UserWarning"
-                            msg = f"DataFrame '{col_list[idx]}' does not contain enough matching columns.\n"
+                    # Handle mismatched columns
+                    if len(cols_x) != len(cols_y):
+                        warning_type = "UserWarning"
+                        msg = "You may have missed some of the columns.\n"
+                        print(f"{warning_type}: {msg}")
+
+                        if manually:
+                            diff_x = [c for c in cols_x - cols_y]
+                            diff_y = [c for c in cols_y - cols_x]
+                            print("The columns that will be lost in each DataFrame are : \n")
+                            print(f"Columns in {col_list[idx]}: {diff_x}")
+                            print(f"\nColumns in {col_list[i]}: {diff_y}")
+
+                            rename_manually = input("You want to rename the columns [y/n]: ")
+                            table_data = create_table_tabular(df_list[idx], df_list[i])
+                            headers = [col_list[idx], col_list[i]]
+                            print(
+                                "########################################################################################"
+                            )
+                            print("The total number of columns in each DataFrame is : ")
+                            print(tabulate(table_data, headers=headers, tablefmt="grid"))
+
+                            if rename_manually == "y":
+                                df_list[idx] = rename_cols_dict(col_list[idx], df_list[idx], diff_x)
+                                df_list[i] = rename_cols_dict(col_list[i], df_list[i], diff_y)
+                                cols_x = set(df_list[idx].columns)
+                                cols_y = set(df_list[i].columns)
+                                cols = list(cols_x.intersection(cols_y))
+
+                    # Merge dataframes based on matching columns
+                    if len(cols) >= match_cols:
+                        try:
+                            df_list[idx] = pd.concat([df_list[idx][cols], df_list[i][cols]])
+                            idx_to_exclude.append(i)
+                        except pd.errors.InvalidIndexError as e:
+                            warning_type = "ValueError"
+                            msg = f"Invalid Index Error encountered while merging dataframes. {e}."
                             print(f"{warning_type}: {msg}")
-                            if merge_mode:
-                                if len(cols) > 0:
-                                    try:
-                                        clearConsole()
-                                        clear_output(wait=True)
-                                        print(
-                                            count,
-                                            "| Progress :",
-                                            "{:.2%}".format(count / len(col_list)),
-                                        )
-                                        if len(df_list[idx]) > len(df_list[i]):
-                                            print("merging dataframes by left")
-                                            print(col_list[idx], "|", col_list[i])
-                                            print(
-                                                "Total Size df1: ",
-                                                "{:,}".format(len(df_list[idx])),
-                                                "| Total Size df2: ",
-                                                "{:,}".format(len(df_list[i])),
-                                            )
-                                            df_list[idx] = (
-                                                df_list[idx].merge(
-                                                    df_list[i].drop_duplicates(), how="left"
-                                                )
-                                            ).drop_duplicates()
-                                            df_list[idx] = rename_cols(df_list[idx])
-                                            idx_to_exclude.append(i)
-                                        print("merged")
-                                    except:
-                                        None
+                            sys.exit("Please check your column names.")
+                    else:
+                        warning_type = "UserWarning"
+                        msg = f"DataFrame '{col_list[idx]}' does not contain enough matching columns.\n"
+                        print(f"{warning_type}: {msg}")
+
+                        if merge_mode and len(cols) > 0:
+                            try:
+                                clearConsole()
+                                clear_output(wait=True)
+                                print(count, "| Progress :", "{:.2%}".format(count / len(col_list)))
+
+                                if len(df_list[idx]) > len(df_list[i]):
+                                    print("Merging dataframes by left join")
+                                    print(f"{col_list[idx]} | {col_list[i]}")
+                                    print(
+                                        f"Total Size df1: {len(df_list[idx]):,} "
+                                        f"| Total Size df2: {len(df_list[i]):,}"
+                                    )
+                                    df_list[idx] = (
+                                        df_list[idx]
+                                        .merge(df_list[i].drop_duplicates(), how="left")
+                                        .drop_duplicates()
+                                    )
+                                    df_list[idx] = rename_cols(df_list[idx])
+                                    idx_to_exclude.append(i)
+                                print("Merged")
+                            except Exception as e:
+                                print(f"An error occurred during merging: {e}")
+
         if idx not in idx_to_exclude:
             new_df_list.append(df_list[idx].reset_index(drop=True))
             new_col_list.append(col_list[idx])
