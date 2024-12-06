@@ -1,5 +1,5 @@
-numpy
+numpy<2.0.0
 pandas
 tabulate
 pydbsmgr
-pyarrow
+pyarrow>=17.0.0
