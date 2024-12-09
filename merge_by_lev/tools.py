@@ -118,11 +118,16 @@ def check_empty_df(
     Tuple[List[pd.DataFrame], List[str]] :
         Verified dataframes and names.
     """
-    return [
-        (df, name)
-        for df, name in zip(dfs, names)
-        if len(df.columns) > num_cols and len(df) > num_cols
-    ]
+    verified_dfs = []
+    verified_names = []
+
+    # Iterar sobre los DataFrames y nombres
+    for df, name in zip(dfs, names):
+        if len(df.columns) > num_cols and len(df) > num_cols:
+            verified_dfs.append(df)
+            verified_names.append(name)
+
+    return verified_dfs, verified_names
 
 
 if __name__ == "__main__":
