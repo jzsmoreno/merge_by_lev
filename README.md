@@ -13,3 +13,7 @@ This package can be easily installed with pip:
 ```bash
 pip install git+https://github.com/jzsmoreno/merge_by_lev
 ```
+or using GitHub Packages:
+```bash
+pip install --extra-index-url https://jzsmoreno:<TOKEN>@pip.pkg.github.com/jzsmoreno merge_by_lev
+```
