@@ -35,5 +35,5 @@ jobs:
           TWINE_PASSWORD: ${{ secrets.TOKEN }}
         run: |
           twine upload \
-            --repository-url --repository-url https://upload.github.com/jzsmoreno/merge_by_lev/ \
+            --repository-url https://upload.github.com/jzsmoreno/merge_by_lev/ \
             dist/*
