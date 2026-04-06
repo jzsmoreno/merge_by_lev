@@ -2,24 +2,60 @@ import os
 import platform
 import re
 import sys
-import warnings
 from functools import lru_cache
 from io import TextIOWrapper
-from typing import Any, List, Tuple
+from typing import Any, List, Tuple, Union
 
 import numpy as np
 import pandas as pd
+import polars as pl
 from IPython.display import clear_output
-from numpy import ndarray
-from pandas.core.frame import DataFrame
 from tabulate import tabulate
 
 from merge_by_lev.tools import check_empty_df
 
 
+def _to_polars(df: Union[pd.DataFrame, pl.DataFrame]) -> pl.DataFrame:
+    """
+    Converts a DataFrame to Polars format.
+
+    Parameters
+    ----------
+    df : `Union[pd.DataFrame, pl.DataFrame]`
+        The DataFrame to convert.
+
+    Returns
+    -------
+    `pl.DataFrame`
+        The DataFrame in Polars format.
+    """
+    if isinstance(df, pd.DataFrame):
+        return pl.from_pandas(df)
+    return df
+
+
+def _to_pandas(df: Union[pd.DataFrame, pl.DataFrame]) -> pd.DataFrame:
+    """
+    Converts a DataFrame to Pandas format.
+
+    Parameters
+    ----------
+    df : `Union[pd.DataFrame, pl.DataFrame]`
+        The DataFrame to convert.
+
+    Returns
+    -------
+    `pd.DataFrame`
+        The DataFrame in Pandas format.
+    """
+    if isinstance(df, pl.DataFrame):
+        return df.to_pandas()
+    return df
+
+
 def progressbar(
     it: range, prefix: str = "", size: int = 40, out: TextIOWrapper = sys.stdout
-) -> None:  # type: ignore
+) -> None:
     """
     Displays a progress bar in the console.
 
@@ -38,7 +74,12 @@ def progressbar(
 
     def show(j: int) -> None:
         x = int(size * j / count)
-        print(f"{prefix}[{'#' * x}{'.' * (size - x)}] {j}/{count}", end="\r", file=out, flush=True)
+        print(
+            f"{prefix}[{'#' * x}{'.' * (size - x)}] {j}/{count}",
+            end="\r",
+            file=out,
+            flush=True,
+        )
 
     show(0)
     for i, item in enumerate(it):
@@ -58,7 +99,9 @@ def clear_console() -> None:
     os.system(command)
 
 
-def check_cols_to_match(dict_dfs: dict[str, DataFrame], df_names: List[str]) -> None:
+def check_cols_to_match(
+    dict_dfs: dict[str, Union[pd.DataFrame, pl.DataFrame]], df_names: List[str]
+) -> None:
     """
     Checks if the dataframes in the dictionary have matching columns.
 
@@ -87,7 +130,9 @@ def check_cols_to_match(dict_dfs: dict[str, DataFrame], df_names: List[str]) -> 
             print(f"Original columns -> {col_set}\n")
 
 
-def rename_cols(df: DataFrame) -> DataFrame:
+def rename_cols(
+    df: Union[pd.DataFrame, pl.DataFrame],
+) -> Union[pd.DataFrame, pl.DataFrame]:
     """
     Renames columns in the dataframe after merging to consolidate similar columns.
 
@@ -103,13 +148,16 @@ def rename_cols(df: DataFrame) -> DataFrame:
     """
     cols = set(col.replace("_x", "").replace("_y", "") for col in df.columns)
 
-    rename_dict = {f"{col}_x": col for col in cols if f"{col}_x" in df.columns}
-    drop_cols = [f"{col}_y" for col in cols if f"{col}_y" in df.columns]
-
-    df.rename(columns=rename_dict, inplace=True)
-    df.drop(columns=drop_cols, inplace=True)
-
-    return df
+    if isinstance(df, pl.DataFrame):
+        rename_dict = {f"{col}_x": col for col in cols if f"{col}_x" in df.columns}
+        drop_cols = [f"{col}_y" for col in cols if f"{col}_y" in df.columns]
+        return df.rename(rename_dict).drop(drop_cols)
+    else:
+        rename_dict = {f"{col}_x": col for col in cols if f"{col}_x" in df.columns}
+        drop_cols = [f"{col}_y" for col in cols if f"{col}_y" in df.columns]
+        df = df.rename(columns=rename_dict)
+        df.drop(columns=drop_cols, inplace=True)
+        return df
 
 
 def clean_names(x: str, pattern: str = r"[a-zA-Zñáéíóú]*") -> str:
@@ -161,7 +209,7 @@ def lev_dist(a: str, b: str) -> int:
     return min_dist(0, 0)
 
 
-def cal_cols_similarity(col_list: List[str]) -> ndarray:
+def cal_cols_similarity(col_list: List[str]) -> np.ndarray:
     """
     Calculates the pairwise Levenshtein distance between column names.
 
@@ -184,7 +232,9 @@ def cal_cols_similarity(col_list: List[str]) -> ndarray:
     return mtx
 
 
-def create_table_tabular(df1: DataFrame, df2: DataFrame) -> List[List[str]]:
+def create_table_tabular(
+    df1: Union[pd.DataFrame, pl.DataFrame], df2: Union[pd.DataFrame, pl.DataFrame]
+) -> List[List[str]]:
     """
     Creates a tabular representation of column names from two dataframes.
 
@@ -201,8 +251,8 @@ def create_table_tabular(df1: DataFrame, df2: DataFrame) -> List[List[str]]:
         List of rows containing the column names of both dataframes.
     """
     table = []
-    col_names_df1 = df1.columns.tolist()
-    col_names_df2 = df2.columns.tolist()
+    col_names_df1 = df1.columns
+    col_names_df2 = df2.columns
     max_length = max(len(col_names_df1), len(col_names_df2))
     for i in range(max_length):
         col1 = col_names_df1[i] if i < len(col_names_df1) else ""
@@ -211,7 +261,9 @@ def create_table_tabular(df1: DataFrame, df2: DataFrame) -> List[List[str]]:
     return table
 
 
-def rename_cols_dict(df_name: str, df: DataFrame, cols: List[str]) -> DataFrame:
+def rename_cols_dict(
+    df_name: str, df: Union[pd.DataFrame, pl.DataFrame], cols: List[str]
+) -> Union[pd.DataFrame, pl.DataFrame]:
     """
     Renames specified columns in a dataframe based on user input.
 
@@ -235,13 +287,17 @@ def rename_cols_dict(df_name: str, df: DataFrame, cols: List[str]) -> DataFrame:
     print(f"Rename the columns of {df_name}")
     string_list = [input(f"Enter name for {name}: ") for name in cols]
     dict_rename = dict(zip(cols, string_list))
-    df = df.rename(columns=dict_rename)
+
+    if isinstance(df, pl.DataFrame):
+        df = df.rename(dict_rename)
+    else:
+        df = df.rename(columns=dict_rename)
     print("Columns renamed!")
     return df
 
 
 def merge_by_similarity(
-    df_list: List[DataFrame],
+    df_list: List[Union[pd.DataFrame, pl.DataFrame]],
     col_list: List[str],
     dist_min: int = 2,
     match_cols: int = 2,
@@ -249,13 +305,14 @@ def merge_by_similarity(
     manually: bool = False,
     drop_empty: bool = False,
     stdout: Any = sys.stdout,
-) -> Tuple[List[DataFrame], List[str], ndarray]:
+    return_polars: bool = True,
+) -> Tuple[List[Union[pd.DataFrame, pl.DataFrame]], List[str], np.ndarray]:
     """
     Merges dataframes based on column similarity using the Levenshtein distance.
 
     Parameters
     ----------
-    df_list : `List`[`DataFrame`]
+    df_list : `List[DataFrame]`
         The list of dataframes to be used in the process.
     col_list : `List[str]`
         The list of dataframe names corresponding to `df_list`.
@@ -269,6 +326,8 @@ def merge_by_similarity(
         If False, avoids manual input when there are differences in columns.
     drop_empty : `bool`, default=False
         If True, discards frames with few columns and rows.
+    return_polars : `bool`, default=True
+        If True, returns Polars DataFrames. If False, returns Pandas DataFrames.
 
     Returns
     -------
@@ -277,11 +336,13 @@ def merge_by_similarity(
         - List of names corresponding to the merged dataframes.
         - Matrix of column similarity distances.
     """
+    df_list = [_to_polars(df) for df in df_list]
+
     if drop_empty:
         df_list, col_list = check_empty_df(df_list, col_list)
 
     mtx = cal_cols_similarity(col_list)
-    new_df_list = []
+    new_df_list: List[pl.DataFrame] = []
     new_col_list = []
     idx_to_exclude = []
     full_col_list_idx = list(range(len(col_list)))
@@ -295,7 +356,6 @@ def merge_by_similarity(
                     cols_y = set(df_list[i].columns)
                     cols = list(cols_x.intersection(cols_y))
 
-                    # Handle mismatched columns
                     if len(cols_x) != len(cols_y):
                         warning_type = "UserWarning"
                         msg = "You may have missed some of the columns.\n"
@@ -324,10 +384,11 @@ def merge_by_similarity(
                                 cols_y = set(df_list[i].columns)
                                 cols = list(cols_x.intersection(cols_y))
 
-                    # Merge dataframes based on matching columns
                     if len(cols) >= match_cols:
                         try:
-                            df_list[idx] = pd.concat([df_list[idx][cols], df_list[i][cols]])
+                            df_list[idx] = pl.concat(
+                                [df_list[idx].select(cols), df_list[i].select(cols)]
+                            )
                             idx_to_exclude.append(i)
                         except pd.errors.InvalidIndexError as e:
                             warning_type = "ValueError"
@@ -341,9 +402,13 @@ def merge_by_similarity(
 
                         if merge_mode and len(cols) > 0:
                             try:
-                                clearConsole()
+                                clear_console()
                                 clear_output(wait=True)
-                                print(count, "| Progress :", "{:.2%}".format(count / len(col_list)))
+                                print(
+                                    count,
+                                    "| Progress :",
+                                    "{:.2%}".format(count / len(col_list)),
+                                )
 
                                 if len(df_list[idx]) > len(df_list[i]):
                                     print("Merging dataframes by left join")
@@ -353,9 +418,7 @@ def merge_by_similarity(
                                         f"| Total Size df2: {len(df_list[i]):,}"
                                     )
                                     df_list[idx] = (
-                                        df_list[idx]
-                                        .merge(df_list[i].drop_duplicates(), how="left")
-                                        .drop_duplicates()
+                                        df_list[idx].join(df_list[i].unique(), how="left").unique()
                                     )
                                     df_list[idx] = rename_cols(df_list[idx])
                                     idx_to_exclude.append(i)
@@ -364,7 +427,11 @@ def merge_by_similarity(
                                 print(f"An error occurred during merging: {e}")
 
         if idx not in idx_to_exclude:
-            new_df_list.append(df_list[idx].reset_index(drop=True))
+            new_df_list.append(df_list[idx].clone())
             new_col_list.append(col_list[idx])
         count += 1
-    return new_df_list, new_col_list, mtx
+
+    if return_polars:
+        return new_df_list, new_col_list, mtx
+    else:
+        return ([_to_pandas(df) for df in new_df_list], new_col_list, mtx)
